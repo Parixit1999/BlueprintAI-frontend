@@ -123,18 +123,8 @@ export default function Upload() {
   }
 
   return (
-    <Box
-      maw={720}
-      mx="auto"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: total > 0 ? undefined : 'calc(100vh - 100px)',
-        justifyContent: total > 0 ? 'flex-start' : 'center',
-      }}
-    >
+    <Box maw={880}>
       <PageHeader
-        align="center"
         title="Upload drawings"
         description="Add CAD (.dxf), vector PDFs, or drawing images. Drop many files at once, or a .zip archive of drawings for bulk import."
       />
@@ -144,34 +134,34 @@ export default function Upload() {
         accept={ACCEPT}
         loading={expanding}
         multiple
-        radius="md"
+        radius="lg"
         p="xl"
       >
-        <Group justify="center" gap="lg" mih={140} style={{ pointerEvents: 'none' }}>
+        <Stack justify="center" align="center" gap="md" mih={340} style={{ pointerEvents: 'none' }}>
           <Dropzone.Accept>
-            <ThemeIcon size={54} radius="md" variant="light" color="brand">
-              <IconUpload size={30} />
+            <ThemeIcon size={72} radius="lg" variant="light" color="brand">
+              <IconUpload size={40} />
             </ThemeIcon>
           </Dropzone.Accept>
           <Dropzone.Reject>
-            <ThemeIcon size={54} radius="md" variant="light" color="red">
-              <IconX size={30} />
+            <ThemeIcon size={72} radius="lg" variant="light" color="red">
+              <IconX size={40} />
             </ThemeIcon>
           </Dropzone.Reject>
           <Dropzone.Idle>
-            <ThemeIcon size={54} radius="md" variant="light" color="brand">
-              <IconCloudUpload size={30} />
+            <ThemeIcon size={72} radius="lg" variant="light" color="brand">
+              <IconCloudUpload size={40} />
             </ThemeIcon>
           </Dropzone.Idle>
-          <div>
+          <Box ta="center">
             <Text size="lg" fw={600}>
               Drag drawings here or click to browse
             </Text>
             <Text size="sm" c="dimmed" mt={4}>
               DXF, PDF, PNG, JPG — or a ZIP of drawings. Multiple files supported.
             </Text>
-          </div>
-        </Group>
+          </Box>
+        </Stack>
       </Dropzone>
 
       {total > 0 && (

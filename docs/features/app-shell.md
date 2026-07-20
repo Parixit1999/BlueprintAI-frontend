@@ -13,5 +13,8 @@ Dark left **sidebar** + scrollable content area. `src/App.jsx` defines routes;
 - `ToastProvider` wraps the app but is now a pass-through; toasts render via
   Mantine notifications (see `ui-system.md`).
 
+- Below `48em` the sidebar becomes a mobile topbar + drawer — see
+  `responsive.md`.
+
 Gotcha: SPA routing needs a host-level fallback (serve `index.html` for unknown
 paths) when deployed.

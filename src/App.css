@@ -2,6 +2,7 @@
 .shell {
   display: flex;
   height: 100vh;
+  height: 100dvh; /* mobile browsers: exclude dynamic chrome */
 }
 
 .sidebar {
@@ -12,6 +13,28 @@
   display: flex;
   flex-direction: column;
   padding: 20px 14px;
+}
+
+.sidebar.drawer-mode {
+  width: 100%;
+  height: 100%;
+}
+
+/* Mobile top bar - hidden on desktop */
+.mobile-topbar {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-ink);
+  padding: 10px 14px;
+}
+
+.brand-mark.small {
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+  border-radius: 7px;
 }
 
 .sidebar-brand {
@@ -1188,4 +1211,92 @@ tbody tr.no-hover:hover {
 .modal-body {
   padding: 16px 18px;
   overflow-y: auto;
+}
+
+/* ---------- Responsive: tables always scrollable when narrow ---------- */
+.table-panel {
+  overflow-x: auto;
+}
+
+.table-panel table {
+  min-width: 720px;
+}
+
+/* ---------- Responsive: tablet and below ---------- */
+@media (max-width: 62em) {
+  .evidence-panel {
+    width: 320px;
+  }
+}
+
+/* ---------- Responsive: mobile ---------- */
+@media (max-width: 48em) {
+  .shell {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .sidebar.drawer-mode {
+    display: flex;
+  }
+
+  .mobile-topbar {
+    display: flex;
+    flex-shrink: 0;
+  }
+
+  .content {
+    padding: 16px 14px 32px;
+  }
+
+  /* Chat stacks vertically: sessions on top, thread below */
+  .chat-layout {
+    flex-direction: column;
+    height: auto;
+    gap: 12px;
+  }
+
+  .chat-sessions {
+    width: 100%;
+  }
+
+  .session-list {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .session-item {
+    flex-shrink: 0;
+    max-width: 220px;
+  }
+
+  .chat-main {
+    height: 65vh;
+    height: 65dvh;
+  }
+
+  .evidence-panel {
+    width: 100%;
+  }
+
+  .msg {
+    max-width: 100%;
+  }
+
+  .msg-bubble {
+    max-width: 100%;
+  }
+
+  /* Document detail: viewer no longer sticky so it scrolls with content */
+  .viewer-panel {
+    position: static;
+  }
+
+  .filters .search {
+    min-width: 140px;
+  }
 }

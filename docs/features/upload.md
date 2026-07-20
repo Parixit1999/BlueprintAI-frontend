@@ -4,6 +4,8 @@
 multi-file, ZIP archives, and a live progress queue.
 
 ## How it works
+- **Layout**: standard left-aligned `PageHeader` on top (consistent with other
+  pages), then a large near-square dropzone (`mih={340}`, `maw=880` page width).
 - **Dropzone**: Mantine `@mantine/dropzone` accepts `.dxf/.pdf/.png/.jpg/.jpeg`
   and `.zip`, multiple files.
 - **ZIP expansion is client-side** via `jszip`: a dropped `.zip` is read in the
