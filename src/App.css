@@ -187,3 +187,41 @@ header {
 .answer h3 {
   margin: 1rem 0 0.4rem;
 }
+
+.viewer {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 0.8rem;
+}
+
+.viewer img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.viewer-highlight {
+  position: absolute;
+  border: 2px solid #e0342b;
+  background: rgba(224, 52, 43, 0.15);
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.chunk {
+  cursor: pointer;
+}
+
+.chunk.focused {
+  border-color: var(--accent, #646cff);
+  box-shadow: 0 0 0 1px var(--accent, #646cff);
+}
+
+.hint {
+  font-size: 13px;
+  margin: 0.2rem 0 0.8rem;
+}

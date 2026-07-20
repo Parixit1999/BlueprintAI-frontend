@@ -31,6 +31,10 @@ export function confirmAndIngest(fileId, corrections, rejected) {
   })
 }
 
+export function getRender(fileId) {
+  return request(`/files/${fileId}/render`)
+}
+
 export function ask(question, topK = 5) {
   return request('/query', {
     method: 'POST',
