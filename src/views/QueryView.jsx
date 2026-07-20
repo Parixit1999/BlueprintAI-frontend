@@ -1,17 +1,20 @@
 import { useState } from 'react'
 import { ask } from '../api'
+import DrawingViewer from './DrawingViewer'
 
 export default function QueryView() {
   const [question, setQuestion] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [result, setResult] = useState(null)
+  const [focused, setFocused] = useState(null)
 
   async function submit(e) {
     e.preventDefault()
     if (!question.trim()) return
     setBusy(true)
     setError(null)
+    setFocused(null)
     try {
       setResult(await ask(question))
     } catch (err) {
@@ -39,8 +42,19 @@ export default function QueryView() {
           <h3>Answer</h3>
           <p>{result.answer}</p>
           <h3>Evidence</h3>
+          <p className="placeholder hint">Click an evidence card to see it highlighted on the drawing.</p>
+          {focused != null && result.evidence[focused] && (
+            <DrawingViewer
+              fileId={result.evidence[focused].source_file_id}
+              highlightBbox={result.evidence[focused].bbox}
+            />
+          )}
           {result.evidence.map((h, i) => (
-            <div key={i} className="chunk">
+            <div
+              key={i}
+              className={focused === i ? 'chunk focused' : 'chunk'}
+              onClick={() => setFocused(i)}
+            >
               <div className="chunk-meta">
                 <span className="region">{h.region_type}</span>
                 <span className="bbox">

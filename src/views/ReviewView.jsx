@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { confirmAndIngest, getExtraction, listFiles } from '../api'
+import DrawingViewer from './DrawingViewer'
 
 function ConfidenceBadge({ level }) {
   return <span className={`badge badge-${level}`}>{level}</span>
@@ -14,6 +15,7 @@ export default function ReviewView() {
   const [status, setStatus] = useState(null)
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [focusedChunk, setFocusedChunk] = useState(null)
 
   useEffect(() => {
     listFiles().then(setFiles).catch((e) => setError(e.message))
@@ -25,6 +27,7 @@ export default function ReviewView() {
     setRejected(new Set())
     setStatus(null)
     setError(null)
+    setFocusedChunk(null)
     try {
       const res = await getExtraction(fileId)
       setChunks(res.chunks)
@@ -77,8 +80,23 @@ export default function ReviewView() {
         {!selected && <p className="placeholder">Select a file to review its extraction.</p>}
         {selected && (
           <>
+            <DrawingViewer
+              fileId={selected}
+              highlightBbox={focusedChunk != null ? chunks[focusedChunk]?.bbox : null}
+            />
+            <p className="placeholder hint">Click a chunk to highlight its region on the drawing.</p>
             {chunks.map((c, i) => (
-              <div key={i} className={rejected.has(i) ? 'chunk rejected' : 'chunk'}>
+              <div
+                key={i}
+                className={[
+                  'chunk',
+                  rejected.has(i) && 'rejected',
+                  focusedChunk === i && 'focused',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                onClick={() => setFocusedChunk(i)}
+              >
                 <div className="chunk-meta">
                   <span className="region">{c.region_type}</span>
                   <ConfidenceBadge level={c.confidence} />
