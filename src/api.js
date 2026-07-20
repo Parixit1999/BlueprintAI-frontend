@@ -20,6 +20,7 @@ async function request(path, options = {}) {
       body?.detail ?? STATUS_FALLBACKS[res.status] ?? `Request failed (HTTP ${res.status})`,
     )
   }
+  if (res.status === 204) return null
   return res.json()
 }
 
@@ -47,6 +48,10 @@ export function confirmAndIngest(fileId, corrections, rejected) {
 
 export function getRender(fileId, page = 1) {
   return request(`/files/${fileId}/render?page=${page}`)
+}
+
+export function deleteFile(fileId) {
+  return request(`/files/${fileId}`, { method: 'DELETE' })
 }
 
 export function getStats() {

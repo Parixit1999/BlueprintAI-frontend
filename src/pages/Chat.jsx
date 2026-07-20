@@ -6,20 +6,56 @@ import {
   sendChatMessage,
 } from '../api'
 import DrawingViewer from '../components/DrawingViewer'
-import Modal from '../components/Modal'
 import { useToast } from '../components/Toast'
 
-function EvidenceChips({ evidence, onOpen }) {
-  if (!evidence?.length) return null
+// The retriever can return the same region more than once; show each unique
+// source once in the references list.
+function dedupeEvidence(evidence) {
+  if (!evidence?.length) return []
+  const seen = new Set()
+  const out = []
+  for (const e of evidence) {
+    const key = `${e.source_file_id}|${e.page ?? 1}|${e.chunk_text}|${JSON.stringify(e.bbox)}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(e)
+  }
+  return out
+}
+
+function AssistantMessage({ content, evidence, onOpenSource }) {
+  const [open, setOpen] = useState(false)
+  const sources = dedupeEvidence(evidence)
   return (
-    <div className="evidence-chips">
-      {evidence.map((h, i) => (
-        <button key={i} className="chip" onClick={() => onOpen(h)}>
-          <span className="chip-region">{h.region_type.replace('_', ' ')}</span>
-          {(h.chunk_text ?? '').slice(0, 32)}
-          {(h.chunk_text ?? '').length > 32 ? '…' : ''}
-        </button>
-      ))}
+    <div className="msg msg-assistant">
+      <div className="assistant-avatar">B</div>
+      <div className="assistant-body">
+        <div className="msg-bubble">
+          <p>{content}</p>
+        </div>
+        {sources.length > 0 && (
+          <div className="sources">
+            <button className="sources-toggle" onClick={() => setOpen((v) => !v)}>
+              <span className={open ? 'caret open' : 'caret'}>▸</span>
+              {sources.length} source{sources.length > 1 ? 's' : ''}
+            </button>
+            {open && (
+              <ol className="sources-list">
+                {sources.map((s, i) => (
+                  <li key={i}>
+                    <button className="source-row" onClick={() => onOpenSource(s)}>
+                      <span className="source-index">{i + 1}</span>
+                      <span className="source-region">{s.region_type.replace('_', ' ')}</span>
+                      <span className="source-text">{s.chunk_text ?? '(unreadable)'}</span>
+                      <span className="source-view">View on drawing →</span>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -30,7 +66,7 @@ export default function Chat() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
-  const [evidenceOpen, setEvidenceOpen] = useState(null)
+  const [sourceOpen, setSourceOpen] = useState(null)
   const toast = useToast()
   const bottomRef = useRef(null)
 
@@ -45,10 +81,11 @@ export default function Chat() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, busy])
 
   async function openSession(sessionId) {
     setActive(sessionId)
+    setSourceOpen(null)
     try {
       const res = await getChatMessages(sessionId)
       setMessages(res.messages)
@@ -63,6 +100,7 @@ export default function Chat() {
       setSessions((prev) => [{ ...s, message_count: 0 }, ...prev])
       setActive(s.session_id)
       setMessages([])
+      setSourceOpen(null)
     } catch (e) {
       toast.error(e.message)
     }
@@ -107,7 +145,7 @@ export default function Chat() {
   }
 
   return (
-    <div className="chat-layout">
+    <div className={sourceOpen ? 'chat-layout panel-open' : 'chat-layout'}>
       <aside className="chat-sessions">
         <button className="primary full" onClick={newSession}>
           + New chat
@@ -129,25 +167,41 @@ export default function Chat() {
 
       <section className="chat-main">
         <div className="chat-thread">
-          {messages.length === 0 && (
+          {messages.length === 0 && !busy && (
             <div className="empty-state">
               <p>Ask anything about your ingested drawings.</p>
               <p className="page-sub">
-                Every answer includes clickable evidence pointing at the exact source region.
+                Answers cite their source regions — expand “Sources” to see each one highlighted on
+                the drawing.
               </p>
             </div>
           )}
-          {messages.map((m) => (
-            <div key={m.message_id} className={`msg msg-${m.role}`}>
-              <div className="msg-bubble">
-                <p>{m.content}</p>
-                <EvidenceChips evidence={m.evidence} onOpen={setEvidenceOpen} />
+          {messages.map((m) =>
+            m.role === 'user' ? (
+              <div key={m.message_id} className="msg msg-user">
+                <div className="msg-bubble">
+                  <p>{m.content}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ) : (
+              <AssistantMessage
+                key={m.message_id}
+                content={m.content}
+                evidence={m.evidence}
+                onOpenSource={setSourceOpen}
+              />
+            ),
+          )}
           {busy && (
             <div className="msg msg-assistant">
-              <div className="msg-bubble thinking">Thinking…</div>
+              <div className="assistant-avatar">B</div>
+              <div className="assistant-body">
+                <div className="msg-bubble thinking">
+                  <span className="dot" />
+                  <span className="dot" />
+                  <span className="dot" />
+                </div>
+              </div>
             </div>
           )}
           <div ref={bottomRef} />
@@ -164,18 +218,27 @@ export default function Chat() {
         </form>
       </section>
 
-      {evidenceOpen && (
-        <Modal title="Source evidence" wide onClose={() => setEvidenceOpen(null)}>
-          <p className="evidence-quote">
-            <span className="region">{evidenceOpen.region_type.replace('_', ' ')}</span>“
-            {evidenceOpen.chunk_text}” <span className="muted">score {evidenceOpen.score}</span>
-          </p>
-          <DrawingViewer
-            fileId={evidenceOpen.source_file_id}
-            highlightBbox={evidenceOpen.bbox}
-            page={evidenceOpen.page ?? 1}
-          />
-        </Modal>
+      {sourceOpen && (
+        <aside className="evidence-panel">
+          <div className="evidence-panel-header">
+            <h3>Source evidence</h3>
+            <button className="icon-btn" onClick={() => setSourceOpen(null)} aria-label="Close">
+              ✕
+            </button>
+          </div>
+          <div className="evidence-panel-body">
+            <p className="evidence-quote">
+              <span className="region">{sourceOpen.region_type.replace('_', ' ')}</span>
+              “{sourceOpen.chunk_text}”
+            </p>
+            <p className="evidence-score muted">Relevance score {sourceOpen.score}</p>
+            <DrawingViewer
+              fileId={sourceOpen.source_file_id}
+              highlightBbox={sourceOpen.bbox}
+              page={sourceOpen.page ?? 1}
+            />
+          </div>
+        </aside>
       )}
     </div>
   )

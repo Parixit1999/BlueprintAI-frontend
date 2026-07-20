@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { confirmAndIngest, getExtraction } from '../api'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { confirmAndIngest, deleteFile, getExtraction } from '../api'
 import { ConfidenceBadge } from '../components/Badges'
+import ConfirmDialog from '../components/ConfirmDialog'
 import DrawingViewer from '../components/DrawingViewer'
 import { useToast } from '../components/Toast'
 
@@ -13,7 +14,10 @@ export default function DocumentDetail() {
   const [rejected, setRejected] = useState(new Set())
   const [focused, setFocused] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const toast = useToast()
+  const navigate = useNavigate()
 
   useEffect(() => {
     getExtraction(fileId)
@@ -53,6 +57,18 @@ export default function DocumentDetail() {
     }
   }
 
+  async function handleDelete() {
+    setDeleting(true)
+    try {
+      await deleteFile(fileId)
+      toast.success('Document deleted.')
+      navigate('/documents')
+    } catch (e) {
+      toast.error(e.message)
+      setDeleting(false)
+    }
+  }
+
   return (
     <div>
       <div className="page-header row">
@@ -68,11 +84,16 @@ export default function DocumentDetail() {
             </p>
           )}
         </div>
-        {reviewing && chunks.length > 0 && (
-          <button className="primary" disabled={busy} onClick={confirm}>
-            {busy ? 'Ingesting…' : 'Confirm & ingest'}
+        <div className="header-actions">
+          {reviewing && chunks.length > 0 && (
+            <button className="primary" disabled={busy} onClick={confirm}>
+              {busy ? 'Ingesting…' : 'Confirm & ingest'}
+            </button>
+          )}
+          <button className="ghost danger-text" onClick={() => setConfirmingDelete(true)}>
+            Delete
           </button>
-        )}
+        </div>
       </div>
 
       <div className="detail-grid">
@@ -126,6 +147,18 @@ export default function DocumentDetail() {
           ))}
         </div>
       </div>
+
+      {confirmingDelete && (
+        <ConfirmDialog
+          title="Delete document?"
+          message="This document, its extracted regions, and its stored files will be permanently removed. This cannot be undone."
+          confirmLabel="Delete"
+          danger
+          busy={deleting}
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmingDelete(false)}
+        />
+      )}
     </div>
   )
 }

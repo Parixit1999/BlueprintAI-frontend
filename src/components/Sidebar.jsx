@@ -58,10 +58,10 @@ export default function Sidebar() {
         ))}
       </nav>
       <div className="sidebar-footer">
-        <div className="avatar">G</div>
+        <div className="avatar">A</div>
         <div>
-          <div className="user-name">Global user</div>
-          <div className="user-sub">Single-user mode</div>
+          <div className="user-name">Admin</div>
+          <div className="user-sub">Workspace owner</div>
         </div>
       </div>
     </aside>
