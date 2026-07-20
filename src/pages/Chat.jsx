@@ -1,12 +1,66 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   createChatSession,
+  deleteChatSession,
   getChatMessages,
   listChatSessions,
+  renameChatSession,
   sendChatMessage,
 } from '../api'
+import ConfirmDialog from '../components/ConfirmDialog'
 import DrawingViewer from '../components/DrawingViewer'
 import { useToast } from '../components/Toast'
+
+function SessionRow({ session, active, renaming, onOpen, onStartRename, onSaveRename, onDelete }) {
+  const [value, setValue] = useState(session.title)
+
+  useEffect(() => {
+    if (renaming) setValue(session.title)
+  }, [renaming, session.title])
+
+  if (renaming) {
+    return (
+      <div className="session-item editing">
+        <input
+          className="session-rename"
+          autoFocus
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') onSaveRename(session.session_id, value)
+            if (e.key === 'Escape') onSaveRename(session.session_id, null)
+          }}
+          onBlur={() => onSaveRename(session.session_id, value)}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className={active ? 'session-item active' : 'session-item'}>
+      <button className="session-open" onClick={() => onOpen(session.session_id)}>
+        <span className="session-title">{session.title}</span>
+        <span className="session-meta">{session.message_count} messages</span>
+      </button>
+      <div className="session-actions">
+        <button
+          className="session-action"
+          title="Rename"
+          onClick={() => onStartRename(session.session_id)}
+        >
+          ✎
+        </button>
+        <button
+          className="session-action danger"
+          title="Delete"
+          onClick={() => onDelete(session)}
+        >
+          🗑
+        </button>
+      </div>
+    </div>
+  )
+}
 
 // The retriever can return the same region more than once; show each unique
 // source once in the references list.
@@ -67,6 +121,9 @@ export default function Chat() {
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [sourceOpen, setSourceOpen] = useState(null)
+  const [renamingId, setRenamingId] = useState(null)
+  const [pendingDelete, setPendingDelete] = useState(null)
+  const [deleting, setDeleting] = useState(false)
   const toast = useToast()
   const bottomRef = useRef(null)
 
@@ -91,6 +148,42 @@ export default function Chat() {
       setMessages(res.messages)
     } catch (e) {
       toast.error(e.message)
+    }
+  }
+
+  async function saveRename(sessionId, value) {
+    setRenamingId(null)
+    if (value == null) return // cancelled
+    const title = value.trim()
+    const current = sessions.find((s) => s.session_id === sessionId)
+    if (!title || title === current?.title) return
+    try {
+      const res = await renameChatSession(sessionId, title)
+      setSessions((prev) =>
+        prev.map((s) => (s.session_id === sessionId ? { ...s, title: res.title } : s)),
+      )
+    } catch (e) {
+      toast.error(e.message)
+    }
+  }
+
+  async function confirmDelete() {
+    setDeleting(true)
+    const sessionId = pendingDelete.session_id
+    try {
+      await deleteChatSession(sessionId)
+      setSessions((prev) => prev.filter((s) => s.session_id !== sessionId))
+      setPendingDelete(null)
+      if (active === sessionId) {
+        setActive(null)
+        setMessages([])
+        setSourceOpen(null)
+      }
+      toast.success('Chat deleted.')
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -152,14 +245,16 @@ export default function Chat() {
         </button>
         <div className="session-list">
           {sessions.map((s) => (
-            <button
+            <SessionRow
               key={s.session_id}
-              className={s.session_id === active ? 'session-item active' : 'session-item'}
-              onClick={() => openSession(s.session_id)}
-            >
-              <span className="session-title">{s.title}</span>
-              <span className="session-meta">{s.message_count} messages</span>
-            </button>
+              session={s}
+              active={s.session_id === active}
+              renaming={renamingId === s.session_id}
+              onOpen={openSession}
+              onStartRename={setRenamingId}
+              onSaveRename={saveRename}
+              onDelete={setPendingDelete}
+            />
           ))}
           {sessions.length === 0 && <p className="empty-note">No chats yet.</p>}
         </div>
@@ -239,6 +334,24 @@ export default function Chat() {
             />
           </div>
         </aside>
+      )}
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title="Delete chat?"
+          message={
+            <>
+              <strong>{pendingDelete.title}</strong> and its {pendingDelete.message_count} message
+              {pendingDelete.message_count === 1 ? '' : 's'} will be permanently removed. This cannot
+              be undone.
+            </>
+          }
+          confirmLabel="Delete"
+          danger
+          busy={deleting}
+          onConfirm={confirmDelete}
+          onCancel={() => setPendingDelete(null)}
+        />
       )}
     </div>
   )

@@ -77,3 +77,15 @@ export function sendChatMessage(sessionId, question) {
     body: JSON.stringify({ question }),
   })
 }
+
+export function renameChatSession(sessionId, title) {
+  return request(`/chats/${sessionId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  })
+}
+
+export function deleteChatSession(sessionId) {
+  return request(`/chats/${sessionId}`, { method: 'DELETE' })
+}

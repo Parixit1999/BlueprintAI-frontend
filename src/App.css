@@ -714,14 +714,11 @@ tbody tr.no-hover:hover {
 }
 
 .session-item {
-  text-align: left;
-  background: none;
+  display: flex;
+  align-items: center;
   border: 1px solid transparent;
   border-radius: 8px;
-  padding: 8px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+  padding: 2px 4px 2px 8px;
 }
 
 .session-item:hover {
@@ -732,6 +729,64 @@ tbody tr.no-hover:hover {
   background: var(--surface);
   border-color: var(--border);
   box-shadow: var(--shadow);
+}
+
+.session-item.editing {
+  padding: 4px;
+}
+
+.session-open {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.session-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.session-item:hover .session-actions,
+.session-item.active .session-actions {
+  opacity: 1;
+}
+
+.session-action {
+  background: none;
+  border: none;
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.session-action:hover {
+  background: var(--page);
+  color: var(--ink);
+}
+
+.session-action.danger:hover {
+  color: var(--critical-text);
+}
+
+.session-rename {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  background: var(--surface);
+  outline: 2px solid var(--accent-wash);
 }
 
 .session-title {
