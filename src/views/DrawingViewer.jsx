@@ -8,24 +8,26 @@ const renderCache = new Map()
  * bbox is in model-space coords; extents [xmin, ymin, xmax, ymax] map it to
  * percentage positions on the image (y is flipped: model space is y-up).
  */
-export default function DrawingViewer({ fileId, highlightBbox }) {
-  const [render, setRender] = useState(renderCache.get(fileId) ?? null)
+export default function DrawingViewer({ fileId, highlightBbox, page = 1 }) {
+  const cacheKey = `${fileId}:${page}`
+  const [render, setRender] = useState(renderCache.get(cacheKey) ?? null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     if (!fileId) return
-    if (renderCache.has(fileId)) {
-      setRender(renderCache.get(fileId))
+    if (renderCache.has(cacheKey)) {
+      setRender(renderCache.get(cacheKey))
       return
     }
     setRender(null)
-    getRender(fileId)
+    setError(null)
+    getRender(fileId, page)
       .then((r) => {
-        renderCache.set(fileId, r)
+        renderCache.set(cacheKey, r)
         setRender(r)
       })
       .catch((e) => setError(e.message))
-  }, [fileId])
+  }, [fileId, page, cacheKey])
 
   if (error) return <p className="error">Drawing preview unavailable: {error}</p>
   if (!render) return <p className="placeholder">Loading drawing…</p>
