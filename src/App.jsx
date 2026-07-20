@@ -1,17 +1,17 @@
 import { useState } from 'react'
 import './App.css'
-
-export const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
+import QueryView from './views/QueryView'
+import ReviewView from './views/ReviewView'
+import UploadView from './views/UploadView'
 
 const TABS = [
-  { id: 'upload', label: 'Upload', description: 'Upload a drawing (DXF / vector PDF) for extraction.' },
-  { id: 'review', label: 'Review', description: 'Verify extracted fields against the source crop before ingestion.' },
-  { id: 'query', label: 'Query', description: 'Ask questions; answers come with highlighted source evidence.' },
+  { id: 'upload', label: 'Upload' },
+  { id: 'review', label: 'Review' },
+  { id: 'query', label: 'Query' },
 ]
 
 function App() {
   const [activeTab, setActiveTab] = useState('upload')
-  const tab = TABS.find((t) => t.id === activeTab)
 
   return (
     <div className="app">
@@ -32,8 +32,9 @@ function App() {
         ))}
       </nav>
       <main>
-        <p>{tab.description}</p>
-        <p className="placeholder">Coming soon.</p>
+        {activeTab === 'upload' && <UploadView onUploaded={() => setActiveTab('review')} />}
+        {activeTab === 'review' && <ReviewView />}
+        {activeTab === 'query' && <QueryView />}
       </main>
     </div>
   )
