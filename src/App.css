@@ -1,12 +1,14 @@
 .app {
-  max-width: 720px;
+  max-width: 860px;
   margin: 0 auto;
   padding: 2rem 1rem;
+}
+
+header {
   text-align: center;
 }
 
 .tagline {
-  color: var(--text, #888);
   opacity: 0.7;
 }
 
@@ -39,4 +41,149 @@
 .placeholder {
   opacity: 0.6;
   font-style: italic;
+}
+
+.error {
+  color: #d33;
+}
+
+.success {
+  color: #2a8a2a;
+}
+
+.file-drop {
+  display: block;
+  border: 2px dashed var(--accent-border, #aaa);
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+}
+
+.file-drop input {
+  display: none;
+}
+
+.review {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.file-list {
+  flex: 0 0 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.file-item {
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: var(--accent-bg, #f0f0f0);
+  cursor: pointer;
+}
+
+.file-item.active {
+  border-color: var(--accent, #646cff);
+}
+
+.chunk-panel {
+  flex: 1;
+  min-width: 0;
+}
+
+.chunk {
+  border: 1px solid var(--border, #ddd);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 0.6rem;
+}
+
+.chunk.rejected {
+  opacity: 0.45;
+}
+
+.chunk input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+.chunk-meta {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  font-size: 12px;
+  margin-bottom: 0.4rem;
+}
+
+.region {
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.bbox,
+.score {
+  opacity: 0.6;
+}
+
+.badge {
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  color: #fff;
+}
+
+.badge-high {
+  background: #2a8a2a;
+}
+
+.badge-medium {
+  background: #d99a00;
+}
+
+.badge-low {
+  background: #d33;
+}
+
+.link {
+  background: none;
+  border: none;
+  color: var(--accent, #646cff);
+  cursor: pointer;
+  padding: 0;
+  margin-left: auto;
+}
+
+.primary {
+  padding: 8px 20px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent, #646cff);
+  color: #fff;
+  cursor: pointer;
+}
+
+.primary:disabled {
+  opacity: 0.6;
+}
+
+.query-form {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 1.2rem;
+}
+
+.query-form input {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 15px;
+}
+
+.answer h3 {
+  margin: 1rem 0 0.4rem;
 }
