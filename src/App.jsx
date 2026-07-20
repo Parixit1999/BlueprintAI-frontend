@@ -1,43 +1,26 @@
-import { useState } from 'react'
+import { Route, Routes } from 'react-router-dom'
 import './App.css'
-import QueryView from './views/QueryView'
-import ReviewView from './views/ReviewView'
-import UploadView from './views/UploadView'
+import Sidebar from './components/Sidebar'
+import { ToastProvider } from './components/Toast'
+import Chat from './pages/Chat'
+import Dashboard from './pages/Dashboard'
+import DocumentDetail from './pages/DocumentDetail'
+import Documents from './pages/Documents'
 
-const TABS = [
-  { id: 'upload', label: 'Upload' },
-  { id: 'review', label: 'Review' },
-  { id: 'query', label: 'Query' },
-]
-
-function App() {
-  const [activeTab, setActiveTab] = useState('upload')
-
+export default function App() {
   return (
-    <div className="app">
-      <header>
-        <h1>BlueprintAI</h1>
-        <p className="tagline">Query engineering drawings with verifiable evidence</p>
-      </header>
-      <nav className="tabs">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            className={t.id === activeTab ? 'tab active' : 'tab'}
-            onClick={() => setActiveTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
-      <main>
-        {activeTab === 'upload' && <UploadView onUploaded={() => setActiveTab('review')} />}
-        {activeTab === 'review' && <ReviewView />}
-        {activeTab === 'query' && <QueryView />}
-      </main>
-    </div>
+    <ToastProvider>
+      <div className="shell">
+        <Sidebar />
+        <main className="content">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/documents" element={<Documents />} />
+            <Route path="/documents/:fileId" element={<DocumentDetail />} />
+            <Route path="/chat" element={<Chat />} />
+          </Routes>
+        </main>
+      </div>
+    </ToastProvider>
   )
 }
-
-export default App

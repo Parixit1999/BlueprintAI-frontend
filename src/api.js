@@ -49,10 +49,26 @@ export function getRender(fileId, page = 1) {
   return request(`/files/${fileId}/render?page=${page}`)
 }
 
-export function ask(question, topK = 5) {
-  return request('/query', {
+export function getStats() {
+  return request('/stats')
+}
+
+export function createChatSession() {
+  return request('/chats', { method: 'POST' })
+}
+
+export function listChatSessions() {
+  return request('/chats')
+}
+
+export function getChatMessages(sessionId) {
+  return request(`/chats/${sessionId}`)
+}
+
+export function sendChatMessage(sessionId, question) {
+  return request(`/chats/${sessionId}/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question, top_k: topK }),
+    body: JSON.stringify({ question }),
   })
 }
