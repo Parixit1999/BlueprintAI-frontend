@@ -1,0 +1,42 @@
+.app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.tagline {
+  color: var(--text, #888);
+  opacity: 0.7;
+}
+
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 1.5rem 0;
+}
+
+.tab {
+  font-size: 16px;
+  padding: 8px 20px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background: var(--accent-bg, #f0f0f0);
+  color: var(--accent, inherit);
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.tab:hover {
+  border-color: var(--accent-border, #ccc);
+}
+
+.tab.active {
+  border-color: var(--accent, #646cff);
+}
+
+.placeholder {
+  opacity: 0.6;
+  font-style: italic;
+}
