@@ -11,6 +11,7 @@ import {
 } from '../api'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DrawingViewer from '../components/DrawingViewer'
+import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 
 function SessionRow({ session, active, renaming, onOpen, onStartRename, onSaveRename, onDelete }) {
@@ -245,7 +246,13 @@ export default function Chat() {
   }
 
   return (
-    <div className={sourceOpen ? 'chat-layout panel-open' : 'chat-layout'}>
+    <div>
+      <PageHeader
+        title="Chat"
+        description="Ask questions about your drawings — every answer cites its source regions"
+        mb="md"
+      />
+      <div className={sourceOpen ? 'chat-layout panel-open' : 'chat-layout'}>
       <aside className="chat-sessions">
         <Button fullWidth leftSection={<IconPlus size={16} />} onClick={newSession}>
           New chat
@@ -360,6 +367,7 @@ export default function Chat() {
           onCancel={() => setPendingDelete(null)}
         />
       )}
+      </div>
     </div>
   )
 }

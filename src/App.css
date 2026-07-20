@@ -695,7 +695,7 @@ tbody tr.no-hover:hover {
 .chat-layout {
   display: flex;
   gap: 16px;
-  height: calc(100vh - 56px);
+  height: calc(100vh - 160px);
 }
 
 .chat-sessions {

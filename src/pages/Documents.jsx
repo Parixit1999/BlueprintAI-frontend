@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { deleteFile, listFiles } from '../api'
 import { StatusBadge } from '../components/Badges'
+import CompareModal from '../components/CompareModal'
 import ConfirmDialog from '../components/ConfirmDialog'
+import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 
 const STATUS_OPTIONS = [
@@ -21,6 +23,7 @@ export default function Documents() {
   const [dupOnly, setDupOnly] = useState(false)
   const [pendingDelete, setPendingDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const [comparing, setComparing] = useState(null)
   const toast = useToast()
   const navigate = useNavigate()
 
@@ -67,15 +70,15 @@ export default function Documents() {
 
   return (
     <div>
-      <div className="page-header row">
-        <div>
-          <h1>Documents</h1>
-          <p className="page-sub">Engineering drawings in the knowledge base</p>
-        </div>
-        <Button leftSection={<IconUpload size={16} />} onClick={() => navigate('/upload')}>
-          Upload drawings
-        </Button>
-      </div>
+      <PageHeader
+        title="Documents"
+        description="Engineering drawings in the knowledge base"
+        actions={
+          <Button leftSection={<IconUpload size={16} />} onClick={() => navigate('/upload')}>
+            Upload drawings
+          </Button>
+        }
+      />
 
       {duplicateCount > 0 && (
         <div className="notice">
@@ -182,6 +185,16 @@ export default function Documents() {
                     <td className="cell-date">{new Date(f.created_at).toLocaleString()}</td>
                     <td className="cell-action" onClick={(e) => e.stopPropagation()}>
                       <div>
+                        {f.is_duplicate && (
+                          <Button
+                            variant="subtle"
+                            color="orange"
+                            size="compact-sm"
+                            onClick={() => setComparing(f)}
+                          >
+                            Compare
+                          </Button>
+                        )}
                         <Button
                           variant="subtle"
                           size="compact-sm"
@@ -213,6 +226,18 @@ export default function Documents() {
             </table>
           </div>
         </>
+      )}
+
+      {comparing && (
+        <CompareModal
+          file={comparing}
+          allFiles={files ?? []}
+          onClose={() => setComparing(null)}
+          onDeleted={() => {
+            setComparing(null)
+            refresh()
+          }}
+        />
       )}
 
       {pendingDelete && (

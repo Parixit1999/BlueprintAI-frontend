@@ -6,6 +6,7 @@ import { confirmAndIngest, deleteFile, getExtraction } from '../api'
 import { ConfidenceBadge } from '../components/Badges'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DrawingViewer from '../components/DrawingViewer'
+import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 
 export default function DocumentDetail() {
@@ -83,32 +84,31 @@ export default function DocumentDetail() {
       >
         Documents
       </Button>
-      <div className="page-header row">
-        <div>
-          <h1>{reviewing ? 'Review extraction' : 'Document'}</h1>
-          {reviewing && (
-            <p className="page-sub">
-              Verify each region against the drawing. Click a region to highlight it; correct or
-              reject anything wrong, then confirm.
-            </p>
-          )}
-        </div>
-        <div className="header-actions">
-          {reviewing && chunks.length > 0 && (
-            <Button loading={busy} onClick={confirm}>
-              Confirm & ingest
+      <PageHeader
+        title={reviewing ? 'Review extraction' : 'Document'}
+        description={
+          reviewing
+            ? 'Verify each region against the drawing. Click a region to highlight it; correct or reject anything wrong, then confirm.'
+            : undefined
+        }
+        actions={
+          <>
+            {reviewing && chunks.length > 0 && (
+              <Button loading={busy} onClick={confirm}>
+                Confirm & ingest
+              </Button>
+            )}
+            <Button
+              variant="light"
+              color="red"
+              leftSection={<IconTrash size={16} />}
+              onClick={() => setConfirmingDelete(true)}
+            >
+              Delete
             </Button>
-          )}
-          <Button
-            variant="light"
-            color="red"
-            leftSection={<IconTrash size={16} />}
-            onClick={() => setConfirmingDelete(true)}
-          >
-            Delete
-          </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <div className="detail-grid">
         <div className="panel viewer-panel">

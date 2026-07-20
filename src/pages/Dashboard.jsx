@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getStats } from '../api'
+import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 
 const TYPE_LABEL = { dxf: 'CAD (DXF)', pdf: 'PDF', png: 'Image (PNG)', jpg: 'Image (JPG)', jpeg: 'Image (JPEG)' }
@@ -76,10 +77,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="page-header">
-        <h1>Dashboard</h1>
-        <p className="page-sub">Overview of your drawing knowledge base</p>
-      </div>
+      <PageHeader title="Dashboard" description="Overview of your drawing knowledge base" />
 
       <div className="tile-grid">
         <Tile label="Documents" value={stats.documents_total} hint={`${stats.documents_by_status.ingested ?? 0} ingested`} />

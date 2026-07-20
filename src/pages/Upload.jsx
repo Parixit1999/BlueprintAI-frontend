@@ -10,7 +10,6 @@ import {
   Stack,
   Text,
   ThemeIcon,
-  Title,
 } from '@mantine/core'
 import { Dropzone } from '@mantine/dropzone'
 import {
@@ -27,6 +26,7 @@ import JSZip from 'jszip'
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { uploadFile } from '../api'
+import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 
 const SUPPORTED = ['dxf', 'pdf', 'png', 'jpg', 'jpeg']
@@ -133,15 +133,11 @@ export default function Upload() {
         justifyContent: total > 0 ? 'flex-start' : 'center',
       }}
     >
-      <Box ta="center" mb="lg">
-        <Title order={2} mb={4}>
-          Upload drawings
-        </Title>
-        <Text c="dimmed" size="sm">
-          Add CAD (.dxf), vector PDFs, or drawing images. Drop many files at once, or a .zip archive
-          of drawings for bulk import.
-        </Text>
-      </Box>
+      <PageHeader
+        align="center"
+        title="Upload drawings"
+        description="Add CAD (.dxf), vector PDFs, or drawing images. Drop many files at once, or a .zip archive of drawings for bulk import."
+      />
 
       <Dropzone
         onDrop={handleDrop}
