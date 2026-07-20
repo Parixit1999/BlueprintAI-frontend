@@ -1,10 +1,24 @@
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
 
+const STATUS_FALLBACKS = {
+  413: 'The file is too large.',
+  422: 'The file could not be processed.',
+  500: 'Something went wrong on the server. Please try again.',
+  503: 'A required service is temporarily unavailable. Please try again shortly.',
+}
+
 async function request(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, options)
+  let res
+  try {
+    res = await fetch(`${API_BASE}${path}`, options)
+  } catch {
+    throw new Error('Cannot reach the BlueprintAI server. Is the backend running?')
+  }
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(body.detail ?? `Request failed (${res.status})`)
+    const body = await res.json().catch(() => null)
+    throw new Error(
+      body?.detail ?? STATUS_FALLBACKS[res.status] ?? `Request failed (HTTP ${res.status})`,
+    )
   }
   return res.json()
 }
@@ -31,8 +45,8 @@ export function confirmAndIngest(fileId, corrections, rejected) {
   })
 }
 
-export function getRender(fileId) {
-  return request(`/files/${fileId}/render`)
+export function getRender(fileId, page = 1) {
+  return request(`/files/${fileId}/render?page=${page}`)
 }
 
 export function ask(question, topK = 5) {

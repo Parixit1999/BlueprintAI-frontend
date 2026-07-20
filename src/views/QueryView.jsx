@@ -47,6 +47,7 @@ export default function QueryView() {
             <DrawingViewer
               fileId={result.evidence[focused].source_file_id}
               highlightBbox={result.evidence[focused].bbox}
+              page={result.evidence[focused].page ?? 1}
             />
           )}
           {result.evidence.map((h, i) => (

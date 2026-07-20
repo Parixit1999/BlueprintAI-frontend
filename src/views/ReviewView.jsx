@@ -83,6 +83,7 @@ export default function ReviewView() {
             <DrawingViewer
               fileId={selected}
               highlightBbox={focusedChunk != null ? chunks[focusedChunk]?.bbox : null}
+              page={focusedChunk != null ? (chunks[focusedChunk]?.page ?? 1) : 1}
             />
             <p className="placeholder hint">Click a chunk to highlight its region on the drawing.</p>
             {chunks.map((c, i) => (
