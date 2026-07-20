@@ -1,5 +1,7 @@
+import { Button } from '@mantine/core'
+import { IconArrowLeft, IconTrash } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { confirmAndIngest, deleteFile, getExtraction } from '../api'
 import { ConfidenceBadge } from '../components/Badges'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -71,11 +73,18 @@ export default function DocumentDetail() {
 
   return (
     <div>
+      <Button
+        variant="subtle"
+        color="gray"
+        size="compact-sm"
+        leftSection={<IconArrowLeft size={16} />}
+        onClick={() => navigate('/documents')}
+        mb="xs"
+      >
+        Documents
+      </Button>
       <div className="page-header row">
         <div>
-          <Link to="/documents" className="back-link">
-            ← Documents
-          </Link>
           <h1>{reviewing ? 'Review extraction' : 'Document'}</h1>
           {reviewing && (
             <p className="page-sub">
@@ -86,13 +95,18 @@ export default function DocumentDetail() {
         </div>
         <div className="header-actions">
           {reviewing && chunks.length > 0 && (
-            <button className="primary" disabled={busy} onClick={confirm}>
-              {busy ? 'Ingesting…' : 'Confirm & ingest'}
-            </button>
+            <Button loading={busy} onClick={confirm}>
+              Confirm & ingest
+            </Button>
           )}
-          <button className="ghost danger-text" onClick={() => setConfirmingDelete(true)}>
+          <Button
+            variant="light"
+            color="red"
+            leftSection={<IconTrash size={16} />}
+            onClick={() => setConfirmingDelete(true)}
+          >
             Delete
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -122,15 +136,18 @@ export default function DocumentDetail() {
                 <ConfidenceBadge level={c.confidence} />
                 {!c.bbox && <span className="muted">no location</span>}
                 {reviewing && (
-                  <button
-                    className="link-btn"
+                  <Button
+                    variant="subtle"
+                    color={rejected.has(i) ? 'brand' : 'red'}
+                    size="compact-xs"
+                    ml="auto"
                     onClick={(e) => {
                       e.stopPropagation()
                       toggleReject(i)
                     }}
                   >
                     {rejected.has(i) ? 'Restore' : 'Reject'}
-                  </button>
+                  </Button>
                 )}
               </div>
               {reviewing ? (

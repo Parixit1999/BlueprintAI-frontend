@@ -1,40 +1,26 @@
-import { createContext, useCallback, useContext, useRef, useState } from 'react'
+import { notifications } from '@mantine/notifications'
+import { IconAlertTriangle, IconCheck, IconInfoCircle } from '@tabler/icons-react'
 
-const ToastContext = createContext(null)
-
-export function useToast() {
-  return useContext(ToastContext)
+// Thin adapter: keeps the app's useToast() API but renders professional
+// Mantine notifications underneath. ToastProvider is now a pass-through.
+export function ToastProvider({ children }) {
+  return children
 }
 
-export function ToastProvider({ children }) {
-  const [toasts, setToasts] = useState([])
-  const idRef = useRef(0)
+const api = {
+  success: (message) =>
+    notifications.show({ color: 'teal', icon: <IconCheck size={18} />, message, autoClose: 4000 }),
+  error: (message) =>
+    notifications.show({
+      color: 'red',
+      icon: <IconAlertTriangle size={18} />,
+      message,
+      autoClose: 6000,
+    }),
+  info: (message) =>
+    notifications.show({ color: 'blue', icon: <IconInfoCircle size={18} />, message, autoClose: 4000 }),
+}
 
-  const push = useCallback((type, message) => {
-    const id = ++idRef.current
-    setToasts((t) => [...t, { id, type, message }])
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4500)
-  }, [])
-
-  const api = {
-    success: (m) => push('success', m),
-    error: (m) => push('error', m),
-    info: (m) => push('info', m),
-  }
-
-  return (
-    <ToastContext.Provider value={api}>
-      {children}
-      <div className="toast-stack" role="status" aria-live="polite">
-        {toasts.map((t) => (
-          <div key={t.id} className={`toast toast-${t.type}`}>
-            <span className="toast-icon">
-              {t.type === 'success' ? '✓' : t.type === 'error' ? '✕' : 'ℹ'}
-            </span>
-            <span>{t.message}</span>
-          </div>
-        ))}
-      </div>
-    </ToastContext.Provider>
-  )
+export function useToast() {
+  return api
 }

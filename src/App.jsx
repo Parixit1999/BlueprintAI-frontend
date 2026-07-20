@@ -6,6 +6,7 @@ import Chat from './pages/Chat'
 import Dashboard from './pages/Dashboard'
 import DocumentDetail from './pages/DocumentDetail'
 import Documents from './pages/Documents'
+import Upload from './pages/Upload'
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
         <main className="content">
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/upload" element={<Upload />} />
             <Route path="/documents" element={<Documents />} />
             <Route path="/documents/:fileId" element={<DocumentDetail />} />
             <Route path="/chat" element={<Chat />} />

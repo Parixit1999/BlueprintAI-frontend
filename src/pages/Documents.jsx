@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Button } from '@mantine/core'
+import { IconUpload } from '@tabler/icons-react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { deleteFile, listFiles, uploadFile } from '../api'
+import { deleteFile, listFiles } from '../api'
 import { StatusBadge } from '../components/Badges'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useToast } from '../components/Toast'
-
-const ACCEPTED = '.dxf,.pdf,.png,.jpg,.jpeg'
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All statuses' },
@@ -15,14 +15,12 @@ const STATUS_OPTIONS = [
 
 export default function Documents() {
   const [files, setFiles] = useState(null)
-  const [uploading, setUploading] = useState(false)
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [dupOnly, setDupOnly] = useState(false)
   const [pendingDelete, setPendingDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
-  const inputRef = useRef(null)
   const toast = useToast()
   const navigate = useNavigate()
 
@@ -53,23 +51,6 @@ export default function Documents() {
     })
   }, [files, query, typeFilter, statusFilter, dupOnly])
 
-  async function handleFile(file) {
-    if (!file) return
-    setUploading(true)
-    toast.info(`Extracting ${file.name}… ${/\.(png|jpe?g)$/i.test(file.name) ? 'Images can take a minute.' : ''}`)
-    try {
-      const res = await uploadFile(file)
-      const low = res.chunks.filter((c) => c.confidence === 'low').length
-      toast.success(`Extracted ${res.chunks.length} regions from ${file.name}.`)
-      if (low > 0) toast.info(`${low} region${low > 1 ? 's are' : ' is'} low-confidence — check carefully.`)
-      navigate(`/documents/${res.file_id}`)
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setUploading(false)
-    }
-  }
-
   async function confirmDelete() {
     setDeleting(true)
     try {
@@ -91,19 +72,9 @@ export default function Documents() {
           <h1>Documents</h1>
           <p className="page-sub">Engineering drawings in the knowledge base</p>
         </div>
-        <button className="primary" disabled={uploading} onClick={() => inputRef.current?.click()}>
-          {uploading ? 'Extracting…' : '+ Upload drawing'}
-        </button>
-        <input
-          ref={inputRef}
-          type="file"
-          accept={ACCEPTED}
-          hidden
-          onChange={(e) => {
-            handleFile(e.target.files[0])
-            e.target.value = ''
-          }}
-        />
+        <Button leftSection={<IconUpload size={16} />} onClick={() => navigate('/upload')}>
+          Upload drawings
+        </Button>
       </div>
 
       {duplicateCount > 0 && (
@@ -114,9 +85,15 @@ export default function Documents() {
             duplicate — the same drawing content appears more than once, even across file formats.
             Review the matches and delete the extra copies.
           </span>
-          <button className="link-btn" onClick={() => setDupOnly((v) => !v)}>
+          <Button
+            variant="subtle"
+            color="orange"
+            size="compact-sm"
+            style={{ flexShrink: 0 }}
+            onClick={() => setDupOnly((v) => !v)}
+          >
             {dupOnly ? 'Show all' : 'Show duplicates'}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -205,12 +182,21 @@ export default function Documents() {
                     <td className="cell-date">{new Date(f.created_at).toLocaleString()}</td>
                     <td className="cell-action" onClick={(e) => e.stopPropagation()}>
                       <div>
-                        <button className="link-btn" onClick={() => navigate(`/documents/${f.file_id}`)}>
+                        <Button
+                          variant="subtle"
+                          size="compact-sm"
+                          onClick={() => navigate(`/documents/${f.file_id}`)}
+                        >
                           {f.status === 'extracted' ? 'Review' : 'View'}
-                        </button>
-                        <button className="link-btn danger-link" onClick={() => setPendingDelete(f)}>
+                        </Button>
+                        <Button
+                          variant="subtle"
+                          color="red"
+                          size="compact-sm"
+                          onClick={() => setPendingDelete(f)}
+                        >
                           Delete
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>

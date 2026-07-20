@@ -1,3 +1,5 @@
+import { ActionIcon, Button, TextInput } from '@mantine/core'
+import { IconPencil, IconPlus, IconSend, IconTrash } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import {
   createChatSession,
@@ -21,16 +23,17 @@ function SessionRow({ session, active, renaming, onOpen, onStartRename, onSaveRe
   if (renaming) {
     return (
       <div className="session-item editing">
-        <input
-          className="session-rename"
+        <TextInput
+          size="xs"
           autoFocus
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => setValue(e.currentTarget.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') onSaveRename(session.session_id, value)
             if (e.key === 'Escape') onSaveRename(session.session_id, null)
           }}
           onBlur={() => onSaveRename(session.session_id, value)}
+          styles={{ input: { fontSize: 13 } }}
         />
       </div>
     )
@@ -43,20 +46,24 @@ function SessionRow({ session, active, renaming, onOpen, onStartRename, onSaveRe
         <span className="session-meta">{session.message_count} messages</span>
       </button>
       <div className="session-actions">
-        <button
-          className="session-action"
-          title="Rename"
+        <ActionIcon
+          variant="subtle"
+          color="gray"
+          size="sm"
+          aria-label="Rename chat"
           onClick={() => onStartRename(session.session_id)}
         >
-          ✎
-        </button>
-        <button
-          className="session-action danger"
-          title="Delete"
+          <IconPencil size={15} />
+        </ActionIcon>
+        <ActionIcon
+          variant="subtle"
+          color="red"
+          size="sm"
+          aria-label="Delete chat"
           onClick={() => onDelete(session)}
         >
-          🗑
-        </button>
+          <IconTrash size={15} />
+        </ActionIcon>
       </div>
     </div>
   )
@@ -240,9 +247,9 @@ export default function Chat() {
   return (
     <div className={sourceOpen ? 'chat-layout panel-open' : 'chat-layout'}>
       <aside className="chat-sessions">
-        <button className="primary full" onClick={newSession}>
-          + New chat
-        </button>
+        <Button fullWidth leftSection={<IconPlus size={16} />} onClick={newSession}>
+          New chat
+        </Button>
         <div className="session-list">
           {sessions.map((s) => (
             <SessionRow
@@ -307,9 +314,9 @@ export default function Chat() {
             placeholder="Ask about your drawings — e.g. What material is the mounting plate?"
             onChange={(e) => setInput(e.target.value)}
           />
-          <button className="primary" type="submit" disabled={busy || !input.trim()}>
+          <Button type="submit" loading={busy} disabled={!input.trim()} rightSection={<IconSend size={16} />}>
             Send
-          </button>
+          </Button>
         </form>
       </section>
 

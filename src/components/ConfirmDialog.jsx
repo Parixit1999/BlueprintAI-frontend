@@ -1,4 +1,4 @@
-import Modal from './Modal'
+import { Button, Group, Modal, Text } from '@mantine/core'
 
 export default function ConfirmDialog({
   title,
@@ -10,20 +10,18 @@ export default function ConfirmDialog({
   onCancel,
 }) {
   return (
-    <Modal title={title} onClose={busy ? () => {} : onCancel}>
-      <p className="confirm-message">{message}</p>
-      <div className="confirm-actions">
-        <button className="ghost" disabled={busy} onClick={onCancel}>
+    <Modal opened onClose={busy ? () => {} : onCancel} title={title} centered radius="md">
+      <Text c="dimmed" size="sm" mb="lg">
+        {message}
+      </Text>
+      <Group justify="flex-end" gap="sm">
+        <Button variant="default" onClick={onCancel} disabled={busy}>
           Cancel
-        </button>
-        <button
-          className={danger ? 'danger' : 'primary'}
-          disabled={busy}
-          onClick={onConfirm}
-        >
-          {busy ? 'Working…' : confirmLabel}
-        </button>
-      </div>
+        </Button>
+        <Button color={danger ? 'red' : 'brand'} onClick={onConfirm} loading={busy}>
+          {confirmLabel}
+        </Button>
+      </Group>
     </Modal>
   )
 }

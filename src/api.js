@@ -24,9 +24,10 @@ async function request(path, options = {}) {
   return res.json()
 }
 
-export function uploadFile(file) {
+export function uploadFile(file, filename) {
   const form = new FormData()
-  form.append('file', file)
+  if (filename) form.append('file', file, filename)
+  else form.append('file', file)
   return request('/files/upload', { method: 'POST', body: form })
 }
 

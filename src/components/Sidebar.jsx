@@ -1,37 +1,16 @@
+import {
+  IconLayoutDashboard,
+  IconMessageCircle,
+  IconFileText,
+  IconUpload,
+} from '@tabler/icons-react'
 import { NavLink } from 'react-router-dom'
 
 const NAV = [
-  {
-    to: '/',
-    label: 'Dashboard',
-    icon: (
-      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6">
-        <rect x="2.5" y="2.5" width="6" height="6" rx="1" />
-        <rect x="11.5" y="2.5" width="6" height="6" rx="1" />
-        <rect x="2.5" y="11.5" width="6" height="6" rx="1" />
-        <rect x="11.5" y="11.5" width="6" height="6" rx="1" />
-      </svg>
-    ),
-  },
-  {
-    to: '/documents',
-    label: 'Documents',
-    icon: (
-      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6">
-        <path d="M5 2.5h7l3.5 3.5v11.5h-10.5z" />
-        <path d="M12 2.5v4h4" />
-      </svg>
-    ),
-  },
-  {
-    to: '/chat',
-    label: 'Chat',
-    icon: (
-      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6">
-        <path d="M3 4.5h14v9h-8l-3.5 3v-3h-2.5z" />
-      </svg>
-    ),
-  },
+  { to: '/', label: 'Dashboard', icon: IconLayoutDashboard, end: true },
+  { to: '/upload', label: 'Upload', icon: IconUpload },
+  { to: '/documents', label: 'Documents', icon: IconFileText },
+  { to: '/chat', label: 'Chat', icon: IconMessageCircle },
 ]
 
 export default function Sidebar() {
@@ -45,15 +24,15 @@ export default function Sidebar() {
         </div>
       </div>
       <nav className="sidebar-nav">
-        {NAV.map((item) => (
+        {NAV.map(({ to, label, icon: Icon, end }) => (
           <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/'}
+            key={to}
+            to={to}
+            end={end}
             className={({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')}
           >
-            {item.icon}
-            {item.label}
+            <Icon size={18} stroke={1.7} />
+            {label}
           </NavLink>
         ))}
       </nav>
