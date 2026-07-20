@@ -123,14 +123,25 @@ export default function Upload() {
   }
 
   return (
-    <Box maw={860}>
-      <Title order={2} mb={4}>
-        Upload drawings
-      </Title>
-      <Text c="dimmed" size="sm" mb="lg">
-        Add CAD (.dxf), vector PDFs, or drawing images. Drop many files at once, or a .zip archive
-        of drawings for bulk import.
-      </Text>
+    <Box
+      maw={720}
+      mx="auto"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: total > 0 ? undefined : 'calc(100vh - 100px)',
+        justifyContent: total > 0 ? 'flex-start' : 'center',
+      }}
+    >
+      <Box ta="center" mb="lg">
+        <Title order={2} mb={4}>
+          Upload drawings
+        </Title>
+        <Text c="dimmed" size="sm">
+          Add CAD (.dxf), vector PDFs, or drawing images. Drop many files at once, or a .zip archive
+          of drawings for bulk import.
+        </Text>
+      </Box>
 
       <Dropzone
         onDrop={handleDrop}
