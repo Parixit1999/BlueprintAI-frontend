@@ -45,7 +45,7 @@ export default function DocumentDetail() {
       const res = await confirmAndIngest(fileId, corrections, [...rejected])
       setStatus('ingested')
       toast.success(
-        `Ingested ${res.ingested_chunks} chunks` +
+        `Ingested ${res.ingested_chunks} region${res.ingested_chunks === 1 ? '' : 's'}` +
           (Object.keys(corrections).length ? ` with ${Object.keys(corrections).length} correction(s)` : '') +
           (res.rejected ? `, ${res.rejected} rejected` : '') +
           '.',

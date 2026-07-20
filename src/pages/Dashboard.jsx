@@ -88,7 +88,7 @@ export default function Dashboard() {
           value={pendingReview}
           hint={pendingReview > 0 ? <Link to="/documents">Review now →</Link> : 'All caught up'}
         />
-        <Tile label="Chunks ingested" value={stats.chunks_total} hint={`${stats.chunks_corrected} human-corrected`} />
+        <Tile label="Extracted regions" value={stats.chunks_total} hint={`${stats.chunks_corrected} human-corrected`} />
         <Tile label="Questions asked" value={stats.questions_asked} hint={`${stats.chat_sessions} chat sessions`} />
       </div>
 
@@ -98,7 +98,7 @@ export default function Dashboard() {
           <BreakdownBar parts={typeParts} />
         </div>
         <div className="panel">
-          <h2>Chunk confidence</h2>
+          <h2>Extraction confidence</h2>
           <BreakdownBar parts={confParts} />
         </div>
       </div>

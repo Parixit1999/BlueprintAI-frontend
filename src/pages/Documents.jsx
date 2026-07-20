@@ -110,8 +110,9 @@ export default function Documents() {
         <div className="notice">
           <span className="notice-icon">!</span>
           <span>
-            {duplicateCount} document{duplicateCount > 1 ? 's appear' : ' appears'} to be a
-            duplicate (identical file content). Review and delete the extra copies.
+            {duplicateCount} document{duplicateCount > 1 ? 's look' : ' looks'} like a possible
+            duplicate — the same drawing content appears more than once, even across file formats.
+            Review the matches and delete the extra copies.
           </span>
           <button className="link-btn" onClick={() => setDupOnly((v) => !v)}>
             {dupOnly ? 'Show all' : 'Show duplicates'}
@@ -166,23 +167,41 @@ export default function Documents() {
                   <th>Name</th>
                   <th>Type</th>
                   <th>Status</th>
-                  <th>Chunks</th>
                   <th>Uploaded</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((f) => (
+                {filtered.map((f) => {
+                  const match = f.similar_documents?.[0]
+                  return (
                   <tr key={f.file_id} onClick={() => navigate(`/documents/${f.file_id}`)}>
                     <td className="cell-name">
-                      {f.filename}
-                      {f.is_duplicate && <span className="dup-tag">Duplicate</span>}
+                      <div className="name-cell">
+                        <span>{f.filename}</span>
+                        {f.is_duplicate && (
+                          <span
+                            className="dup-tag"
+                            title={
+                              match
+                                ? `${Math.round(match.similarity * 100)}% similar to ${match.filename}`
+                                : 'Possible duplicate'
+                            }
+                          >
+                            Possible duplicate
+                          </span>
+                        )}
+                      </div>
+                      {match && (
+                        <div className="dup-match">
+                          {Math.round(match.similarity * 100)}% similar to {match.filename}
+                        </div>
+                      )}
                     </td>
                     <td className="cell-type">{f.file_type.toUpperCase()}</td>
                     <td>
                       <StatusBadge status={f.status} />
                     </td>
-                    <td className="cell-num">{f.chunk_count}</td>
                     <td className="cell-date">{new Date(f.created_at).toLocaleString()}</td>
                     <td className="cell-action" onClick={(e) => e.stopPropagation()}>
                       <div>
@@ -195,10 +214,11 @@ export default function Documents() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
                 {filtered.length === 0 && (
                   <tr className="no-hover">
-                    <td colSpan={6} className="empty-note center">
+                    <td colSpan={5} className="empty-note center">
                       No documents match these filters.
                     </td>
                   </tr>
@@ -214,9 +234,8 @@ export default function Documents() {
           title="Delete document?"
           message={
             <>
-              <strong>{pendingDelete.filename}</strong> and its {pendingDelete.chunk_count} ingested
-              chunk{pendingDelete.chunk_count === 1 ? '' : 's'} will be permanently removed. This
-              cannot be undone.
+              <strong>{pendingDelete.filename}</strong> and all of its extracted regions will be
+              permanently removed. This cannot be undone.
             </>
           }
           confirmLabel="Delete"

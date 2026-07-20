@@ -411,10 +411,15 @@ tbody tr:last-child td {
   color: var(--critical-text);
 }
 
+.name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .dup-tag {
   display: inline-block;
-  margin-left: 8px;
-  padding: 1px 7px;
+  padding: 1px 8px;
   border-radius: 5px;
   font-size: 10.5px;
   font-weight: 600;
@@ -422,6 +427,14 @@ tbody tr:last-child td {
   letter-spacing: 0.03em;
   color: var(--warning-text);
   background: rgba(250, 178, 25, 0.16);
+  cursor: help;
+  white-space: nowrap;
+}
+
+.dup-match {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 2px;
 }
 
 tbody tr.no-hover {
