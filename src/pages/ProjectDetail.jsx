@@ -337,8 +337,27 @@ export default function ProjectDetail() {
           title="Delete project?"
           message={
             <>
-              <strong>{project.name}</strong> will be deleted. Its drawings and files are kept
-              but become unassigned.
+              <strong>{project.name}</strong> will be deleted along with its{' '}
+              <strong>
+                {project.drawings.length} drawing{project.drawings.length === 1 ? '' : 's'}
+              </strong>{' '}
+              and{' '}
+              <strong>
+                {project.sets.length} set{project.sets.length === 1 ? '' : 's'}
+              </strong>
+              .{' '}
+              {(() => {
+                const files = project.drawings.reduce((s, d) => s + (d.file_count ?? 0), 0)
+                return files > 0 ? (
+                  <>
+                    The <strong>{files} uploaded document{files === 1 ? '' : 's'}</strong> will
+                    be kept and become unassigned — no documents are ever deleted by this.
+                  </>
+                ) : (
+                  'No uploaded documents are attached to this project.'
+                )
+              })()}{' '}
+              This cannot be undone.
             </>
           }
           confirmLabel="Delete"
