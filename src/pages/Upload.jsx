@@ -123,7 +123,7 @@ export default function Upload() {
   }
 
   return (
-    <Box maw={880}>
+    <Box>
       <PageHeader
         title="Upload drawings"
         description="Add CAD (.dxf), vector PDFs, or drawing images. Drop many files at once, or a .zip archive of drawings for bulk import."
@@ -167,7 +167,7 @@ export default function Upload() {
       </Dropzone>
 
       {total > 0 && (
-        <Paper withBorder radius="md" mt="lg" p="md">
+        <Paper withBorder radius="md" mt="lg" p="md" maw={560} mx="auto">
           <Group justify="space-between" mb="sm">
             <Group gap="xs">
               <Text fw={600}>Import progress</Text>
