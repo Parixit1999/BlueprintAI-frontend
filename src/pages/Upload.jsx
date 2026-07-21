@@ -136,6 +136,8 @@ export default function Upload() {
         multiple
         radius="lg"
         p="xl"
+        maw={560}
+        mx="auto"
       >
         <Stack justify="center" align="center" gap="md" mih={340} style={{ pointerEvents: 'none' }}>
           <Dropzone.Accept>
