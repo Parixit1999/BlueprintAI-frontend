@@ -469,6 +469,12 @@ tbody tr:last-child td {
   animation: refresh-rotate 0.6s linear infinite;
 }
 
+.feedback-row {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
 /* Version-aware retrieval: which drawing version answered, under the bubble */
 .version-context {
   margin-top: 6px;

@@ -1,5 +1,12 @@
 import { ActionIcon, Badge, Button, Select, TextInput } from '@mantine/core'
-import { IconPencil, IconPlus, IconSend, IconTrash } from '@tabler/icons-react'
+import {
+  IconPencil,
+  IconPlus,
+  IconSend,
+  IconThumbDown,
+  IconThumbUp,
+  IconTrash,
+} from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -8,6 +15,7 @@ import {
   getChatMessages,
   listChatSessions,
   listProjects,
+  rateChatMessage,
   renameChatSession,
   sendChatMessage,
 } from '../api'
@@ -97,7 +105,7 @@ function sourceLabels(sources) {
   return labels
 }
 
-function AssistantMessage({ content, evidence, versionContext, onOpenSource }) {
+function AssistantMessage({ messageId, content, evidence, versionContext, feedback, onOpenSource, onRate }) {
   const [open, setOpen] = useState(false)
   const sources = dedupeEvidence(evidence)
   const combined = sourceLabels(sources)
@@ -120,6 +128,28 @@ function AssistantMessage({ content, evidence, versionContext, onOpenSource }) {
             {versionContext.other_versions
               .map((v) => v.label + (v.also_matched ? ' (also matched this question)' : ''))
               .join('; ')}
+          </div>
+        )}
+        {onRate && (
+          <div className="feedback-row">
+            <ActionIcon
+              variant={feedback === 1 ? 'filled' : 'subtle'}
+              color={feedback === 1 ? 'teal' : 'gray'}
+              size="sm"
+              aria-label="Helpful"
+              onClick={() => onRate(messageId, 1)}
+            >
+              <IconThumbUp size={15} />
+            </ActionIcon>
+            <ActionIcon
+              variant={feedback === -1 ? 'filled' : 'subtle'}
+              color={feedback === -1 ? 'red' : 'gray'}
+              size="sm"
+              aria-label="Not helpful"
+              onClick={() => onRate(messageId, -1)}
+            >
+              <IconThumbDown size={15} />
+            </ActionIcon>
           </div>
         )}
         {sources.length > 0 && (
@@ -192,6 +222,26 @@ export default function Chat() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, busy])
+
+  async function handleRate(messageId, rating) {
+    const current = messages.find((m) => m.message_id === messageId)?.feedback ?? null
+    const next = current === rating ? 0 : rating // clicking again clears
+    try {
+      await rateChatMessage(active, messageId, next)
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.message_id === messageId ? { ...m, feedback: next === 0 ? null : next } : m,
+        ),
+      )
+      toast.success(
+        next === 0
+          ? 'Feedback cleared.'
+          : 'Thanks - your feedback adjusts how these sources rank in future answers.',
+      )
+    } catch (e) {
+      toast.error(e.message)
+    }
+  }
 
   async function openSession(sessionId) {
     setActive(sessionId)
@@ -356,10 +406,13 @@ export default function Chat() {
             ) : (
               <AssistantMessage
                 key={m.message_id}
+                messageId={m.message_id}
                 content={m.content}
                 evidence={m.evidence}
                 versionContext={m.version_context}
+                feedback={m.feedback}
                 onOpenSource={setSourceOpen}
+                onRate={handleRate}
               />
             ),
           )}
