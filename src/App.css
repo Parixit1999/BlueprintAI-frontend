@@ -465,7 +465,8 @@ tbody tr:last-child td {
 }
 
 .refresh-spinning {
-  animation: refresh-rotate 0.8s linear infinite;
+  /* duration must match SPIN_MS in PageHeader.jsx */
+  animation: refresh-rotate 0.6s linear infinite;
 }
 
 .cell-action .link-btn {
