@@ -71,7 +71,17 @@ export function UploadQueueProvider({ children }) {
           },
           next.folderId ?? null,
         )
-        patch(next.id, { status: 'done', fileId: res.file_id, regions: res.chunks.length })
+        const sugg = res.suggestions ?? {}
+        const topDrawing = (sugg.drawing_suggestions ?? [])[0] ?? null
+        const topProject = (sugg.project_suggestions ?? [])[0] ?? null
+        patch(next.id, {
+          status: 'done',
+          fileId: res.file_id,
+          regions: res.chunks.length,
+          autoAssignment: res.auto_assignment ?? null,
+          topDrawing,
+          topProject,
+        })
       } catch (e) {
         patch(next.id, { status: 'error', error: e.message })
       }

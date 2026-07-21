@@ -22,8 +22,11 @@ import {
   IconUpload,
   IconX,
 } from '@tabler/icons-react'
+import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { assignFile, unassignFile } from '../api'
 import PageHeader from '../components/PageHeader'
+import { useToast } from '../components/Toast'
 import {
   STATUS,
   ext,
@@ -33,8 +36,44 @@ import {
 
 export default function Upload() {
   const navigate = useNavigate()
+  const toast = useToast()
   const [searchParams] = useSearchParams()
   const uploadFolderId = searchParams.get('folder')
+  // per-item overrides after the user acts on a suggestion / undo
+  const [resolved, setResolved] = useState({}) // itemId -> {kind: 'undone'|'assigned', label?}
+  const [actingOn, setActingOn] = useState(null)
+
+  async function undoAutoAssign(item) {
+    setActingOn(item.id)
+    try {
+      await unassignFile(item.fileId)
+      setResolved((prev) => ({ ...prev, [item.id]: { kind: 'undone' } }))
+      toast.success('Assignment undone.')
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      setActingOn(null)
+    }
+  }
+
+  async function acceptSuggestion(item) {
+    setActingOn(item.id)
+    try {
+      if (item.topDrawing) {
+        await assignFile(item.fileId, { drawing_id: item.topDrawing.drawing_id })
+        setResolved((prev) => ({ ...prev, [item.id]: { kind: 'assigned', label: item.topDrawing.dwg_number } }))
+        toast.success(`Attached to drawing ${item.topDrawing.dwg_number}.`)
+      } else if (item.topProject) {
+        await assignFile(item.fileId, { new_drawing: { project_id: item.topProject.project_id } })
+        setResolved((prev) => ({ ...prev, [item.id]: { kind: 'assigned', label: item.topProject.name } }))
+        toast.success(`Added to ${item.topProject.name} as a new drawing.`)
+      }
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      setActingOn(null)
+    }
+  }
   const {
     items,
     expanding,
@@ -183,6 +222,63 @@ export default function Upload() {
                               : ext(item.name).toUpperCase()}
                         </Text>
                       )}
+                      {item.status === 'done' && (() => {
+                        const state = resolved[item.id]
+                        if (state?.kind === 'undone') {
+                          return (
+                            <Text size="xs" c="dimmed" mt={4}>
+                              Unassigned — use Assign on the Documents page.
+                            </Text>
+                          )
+                        }
+                        if (state?.kind === 'assigned') {
+                          return (
+                            <Badge variant="light" color="teal" size="sm" mt={4}>
+                              Assigned to {state.label}
+                            </Badge>
+                          )
+                        }
+                        if (item.autoAssignment) {
+                          return (
+                            <Group gap="xs" mt={4}>
+                              <Badge variant="light" color="teal" size="sm">
+                                Auto-assigned to {item.autoAssignment.dwg_number}
+                              </Badge>
+                              <Button
+                                variant="subtle"
+                                color="gray"
+                                size="compact-xs"
+                                loading={actingOn === item.id}
+                                onClick={() => undoAutoAssign(item)}
+                              >
+                                Undo
+                              </Button>
+                            </Group>
+                          )
+                        }
+                        const top = item.topDrawing ?? item.topProject
+                        if (top) {
+                          const label = item.topDrawing
+                            ? `drawing ${item.topDrawing.dwg_number}`
+                            : `project ${item.topProject.name}`
+                          return (
+                            <Group gap="xs" mt={4} wrap="nowrap">
+                              <Text size="xs" c="dimmed" truncate>
+                                Looks like {label} ({Math.round(top.score * 100)}%)
+                              </Text>
+                              <Button
+                                variant="light"
+                                size="compact-xs"
+                                loading={actingOn === item.id}
+                                onClick={() => acceptSuggestion(item)}
+                              >
+                                Assign
+                              </Button>
+                            </Group>
+                          )
+                        }
+                        return null
+                      })()}
                     </div>
                   </Group>
                   <Group gap="xs" wrap="nowrap">
