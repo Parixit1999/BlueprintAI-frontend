@@ -455,6 +455,19 @@ tbody tr:last-child td {
   text-align: left;
 }
 
+/* Refresh button: rotate the icon in place while a reload is in flight.
+   (Mantine's `loading` prop swaps the icon for a spinner, which made the
+   button contents visibly jump at the start and end of every refresh.) */
+@keyframes refresh-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.refresh-spinning {
+  animation: refresh-rotate 0.8s linear infinite;
+}
+
 .cell-action .link-btn {
   margin-left: 0;
 }
