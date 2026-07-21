@@ -973,6 +973,46 @@ tbody tr.no-hover:hover {
   margin: 0;
 }
 
+/* markdown answers: tables, lists, code inside assistant bubbles */
+.markdown-body > * + * {
+  margin-top: 8px;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.markdown-body code {
+  font-size: 0.85em;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
+.markdown-body .md-table-wrap {
+  overflow-x: auto;
+}
+
+.markdown-body table {
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid var(--hairline);
+  padding: 5px 10px;
+  text-align: left;
+}
+
+.markdown-body th {
+  background: var(--surface);
+  font-weight: 600;
+}
+
 .msg-bubble.thinking {
   display: flex;
   gap: 5px;

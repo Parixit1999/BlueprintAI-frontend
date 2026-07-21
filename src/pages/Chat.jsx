@@ -8,7 +8,9 @@ import {
   IconTrash,
 } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
+import Markdown from 'react-markdown'
 import { useNavigate } from 'react-router-dom'
+import remarkGfm from 'remark-gfm'
 import {
   createChatSession,
   deleteChatSession,
@@ -113,8 +115,20 @@ function AssistantMessage({ messageId, content, evidence, versionContext, feedba
     <div className="msg msg-assistant">
       <div className="assistant-avatar">B</div>
       <div className="assistant-body">
-        <div className="msg-bubble">
-          <p>{content}</p>
+        <div className="msg-bubble markdown-body">
+          <Markdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              table: (props) => (
+                <div className="md-table-wrap">
+                  <table {...props} />
+                </div>
+              ),
+              a: (props) => <a {...props} target="_blank" rel="noreferrer" />,
+            }}
+          >
+            {content}
+          </Markdown>
         </div>
         {combined.length > 1 && (
           <div className="version-context">
