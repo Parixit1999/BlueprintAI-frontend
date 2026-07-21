@@ -1,6 +1,7 @@
 import { ActionIcon, Box, Group, Text, Title, Tooltip } from '@mantine/core'
 import { IconRefresh } from '@tabler/icons-react'
 import { useState } from 'react'
+import { useToast } from './Toast'
 
 /**
  * The one page-header used on every page, so titles and descriptions are
@@ -18,14 +19,25 @@ export default function PageHeader({
   mb = 'lg',
 }) {
   const [refreshing, setRefreshing] = useState(false)
+  const toast = useToast()
+
+  // Must match the `refresh-rotate` animation duration in App.css.
+  const SPIN_MS = 600
 
   async function handleRefresh() {
+    if (refreshing) return
     setRefreshing(true)
+    const started = Date.now()
     try {
       await onRefresh()
+      toast.success(`${title} refreshed.`)
     } finally {
-      // brief minimum spin so an instant reload still gives visible feedback
-      setTimeout(() => setRefreshing(false), 350)
+      // Local reloads settle in milliseconds - too fast to see. Keep spinning
+      // until the CURRENT rotation cycle completes (at least one full turn),
+      // so the feedback is visible and the icon never snaps mid-rotation.
+      const elapsed = Date.now() - started
+      const remaining = SPIN_MS - (elapsed % SPIN_MS)
+      setTimeout(() => setRefreshing(false), remaining)
     }
   }
 
@@ -44,15 +56,16 @@ export default function PageHeader({
 
   const refreshButton = onRefresh && (
     <Tooltip label="Refresh" withArrow>
+      {/* No `loading` prop: swapping the icon for a spinner made the button
+          visually "bounce" on every click. Rotate the icon in place instead. */}
       <ActionIcon
         variant="default"
         size="lg"
         radius="md"
         aria-label="Refresh"
         onClick={handleRefresh}
-        loading={refreshing}
       >
-        <IconRefresh size={18} />
+        <IconRefresh size={18} className={refreshing ? 'refresh-spinning' : undefined} />
       </ActionIcon>
     </Tooltip>
   )
