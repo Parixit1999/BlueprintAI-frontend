@@ -1,6 +1,7 @@
 import { ActionIcon, Badge, Button, Select, TextInput } from '@mantine/core'
 import { IconPencil, IconPlus, IconSend, IconTrash } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   createChatSession,
   deleteChatSession,
@@ -109,10 +110,14 @@ function AssistantMessage({ content, evidence, onOpenSource }) {
                     <button className="source-row" onClick={() => onOpenSource(s)}>
                       <span className="source-index">{i + 1}</span>
                       <span className="source-region">
-                        {s.dwg_number ?? s.region_type.replace('_', ' ')}
+                        {s.region_type === 'registry'
+                          ? (s.label ?? 'registry')
+                          : (s.dwg_number ?? s.region_type.replace('_', ' '))}
                       </span>
                       <span className="source-text">{s.chunk_text ?? '(unreadable)'}</span>
-                      <span className="source-view">View on drawing →</span>
+                      <span className="source-view">
+                        {s.region_type === 'registry' ? 'View record →' : 'View on drawing →'}
+                      </span>
                     </button>
                   </li>
                 ))}
@@ -138,6 +143,7 @@ export default function Chat() {
   const [pendingDelete, setPendingDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const toast = useToast()
+  const navigate = useNavigate()
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -367,7 +373,11 @@ export default function Chat() {
           </div>
           <div className="evidence-panel-body">
             <p className="evidence-quote">
-              <span className="region">{sourceOpen.region_type.replace('_', ' ')}</span>
+              <span className="region">
+                {sourceOpen.region_type === 'registry'
+                  ? `${sourceOpen.entity_type} record`
+                  : sourceOpen.region_type.replace('_', ' ')}
+              </span>
               “{sourceOpen.chunk_text}”
             </p>
             {(sourceOpen.dwg_number || sourceOpen.project_name || sourceOpen.filename) && (
@@ -381,11 +391,30 @@ export default function Chat() {
               </p>
             )}
             <p className="evidence-score muted">Relevance score {sourceOpen.score}</p>
-            <DrawingViewer
-              fileId={sourceOpen.source_file_id}
-              highlightBbox={sourceOpen.bbox}
-              page={sourceOpen.page ?? 1}
-            />
+            {sourceOpen.source_file_id ? (
+              <DrawingViewer
+                fileId={sourceOpen.source_file_id}
+                highlightBbox={sourceOpen.bbox}
+                page={sourceOpen.page ?? 1}
+              />
+            ) : sourceOpen.region_type === 'registry' ? (
+              // Registry cards have no drawing to render; link to the record.
+              <Button
+                variant="light"
+                size="xs"
+                onClick={() =>
+                  navigate(
+                    sourceOpen.entity_type === 'drawing'
+                      ? `/drawings/${sourceOpen.entity_id}`
+                      : sourceOpen.entity_type === 'project'
+                        ? `/projects/${sourceOpen.entity_id}`
+                        : `/projects/${sourceOpen.project_id}`,
+                  )
+                }
+              >
+                Open {sourceOpen.entity_type} record →
+              </Button>
+            ) : null}
           </div>
         </aside>
       )}

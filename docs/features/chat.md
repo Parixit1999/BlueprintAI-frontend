@@ -22,6 +22,11 @@ drawings, with persistent sessions and verifiable evidence.
 - **Evidence context**: source rows show the DWG number when the file is
   assigned (falls back to region type); the evidence panel shows a DWG badge,
   filename, and project name.
+- **Registry evidence** (Phase 2): answers can be grounded in registry metadata
+  cards (projects, drawing metadata, sets, versions) instead of file content.
+  Those sources show the entity label + "View record"; the panel renders the
+  card text and an "Open <entity> record" button (no DrawingViewer - there is
+  no bbox), navigating to the drawing/project page.
 
 Note: retrieval is document-scoped on the backend, so all sources for one answer
 come from a single drawing (no cross-document contamination); off-topic questions
