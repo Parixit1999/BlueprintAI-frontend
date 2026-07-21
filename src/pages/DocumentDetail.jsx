@@ -65,7 +65,8 @@ export default function DocumentDetail() {
     try {
       await deleteFile(fileId)
       toast.success('Document deleted.')
-      navigate('/documents')
+      if (window.history.state?.idx > 0) navigate(-1)
+      else navigate('/documents')
     } catch (e) {
       toast.error(e.message)
       setDeleting(false)
@@ -79,7 +80,7 @@ export default function DocumentDetail() {
         color="gray"
         size="compact-sm"
         leftSection={<IconArrowLeft size={16} />}
-        onClick={() => navigate('/documents')}
+        onClick={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/documents'))}
         mb="xs"
       >
         Documents

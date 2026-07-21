@@ -84,7 +84,13 @@ export default function Dashboard() {
         <Tile
           label="Awaiting review"
           value={pendingReview}
-          hint={pendingReview > 0 ? <Link to="/documents">Review now →</Link> : 'All caught up'}
+          hint={
+            pendingReview > 0 ? (
+              <Link to="/documents?status=extracted">Review now →</Link>
+            ) : (
+              'All caught up'
+            )
+          }
         />
         <Tile label="Extracted regions" value={stats.chunks_total} hint={`${stats.chunks_corrected} human-corrected`} />
         <Tile label="Questions asked" value={stats.questions_asked} hint={`${stats.chat_sessions} chat sessions`} />

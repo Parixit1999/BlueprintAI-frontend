@@ -5,6 +5,14 @@ duplicate flagging, and delete.
 
 - **Filters** (client-side): name search, type, status, and a "Duplicates only"
   toggle, with a live "N of M" count.
+- **Filter state lives in the URL** (`?q=&type=&status=&dup=1`) via
+  `useSearchParams`, not `useState` — so filters survive opening a document and
+  coming back, page refresh, and can be deep-linked (Dashboard's "Review now"
+  links to `/documents?status=extracted`). Defaults (`all`, empty) are removed
+  from the URL; updates use `replace: true` so typing in search doesn't spam
+  history. `DocumentDetail`'s back button (and post-delete redirect) use
+  `navigate(-1)` when in-app history exists, falling back to `/documents` on
+  deep links.
 - **Duplicate detection** is embedding-based (backend). Each row with
   `is_duplicate` shows a "Possible duplicate" tag and a "N% similar to <file>"
   subline (from `similar_documents[0]`). A top notice banner summarizes and

@@ -1,7 +1,7 @@
 import { Button } from '@mantine/core'
 import { IconUpload } from '@tabler/icons-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { deleteFile, listFiles } from '../api'
 import { StatusBadge } from '../components/Badges'
 import CompareModal from '../components/CompareModal'
@@ -17,15 +17,29 @@ const STATUS_OPTIONS = [
 
 export default function Documents() {
   const [files, setFiles] = useState(null)
-  const [query, setQuery] = useState('')
-  const [typeFilter, setTypeFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [dupOnly, setDupOnly] = useState(false)
+  // Filters live in the URL so they survive navigating to a document and back
+  const [searchParams, setSearchParams] = useSearchParams()
+  const query = searchParams.get('q') ?? ''
+  const typeFilter = searchParams.get('type') ?? 'all'
+  const statusFilter = searchParams.get('status') ?? 'all'
+  const dupOnly = searchParams.get('dup') === '1'
   const [pendingDelete, setPendingDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const [comparing, setComparing] = useState(null)
   const toast = useToast()
   const navigate = useNavigate()
+
+  function setFilter(key, value) {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        if (value === '' || value === 'all' || value === false) next.delete(key)
+        else next.set(key, value === true ? '1' : value)
+        return next
+      },
+      { replace: true },
+    )
+  }
 
   function refresh() {
     listFiles()
@@ -93,7 +107,7 @@ export default function Documents() {
             color="orange"
             size="compact-sm"
             style={{ flexShrink: 0 }}
-            onClick={() => setDupOnly((v) => !v)}
+            onClick={() => setFilter('dup', !dupOnly)}
           >
             {dupOnly ? 'Show all' : 'Show duplicates'}
           </Button>
@@ -114,9 +128,9 @@ export default function Documents() {
               className="search"
               placeholder="Search by name…"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => setFilter('q', e.target.value)}
             />
-            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+            <select value={typeFilter} onChange={(e) => setFilter('type', e.target.value)}>
               <option value="all">All types</option>
               {types.map((t) => (
                 <option key={t} value={t}>
@@ -124,7 +138,7 @@ export default function Documents() {
                 </option>
               ))}
             </select>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <select value={statusFilter} onChange={(e) => setFilter('status', e.target.value)}>
               {STATUS_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
@@ -132,7 +146,7 @@ export default function Documents() {
               ))}
             </select>
             <label className="dup-toggle">
-              <input type="checkbox" checked={dupOnly} onChange={(e) => setDupOnly(e.target.checked)} />
+              <input type="checkbox" checked={dupOnly} onChange={(e) => setFilter('dup', e.target.checked)} />
               Duplicates only
             </label>
             <span className="filter-count">
