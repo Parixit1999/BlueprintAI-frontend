@@ -53,7 +53,7 @@ export default function Files() {
   const [renaming, setRenaming] = useState(null) // {kind: 'file'|'folder', id, name}
   const [renameValue, setRenameValue] = useState('')
   const [moving, setMoving] = useState(null) // {kind, id, name, subtree?}
-  const [moveTarget, setMoveTarget] = useState('root')
+  const [moveTarget, setMoveTarget] = useState(null)
   const [pendingDelete, setPendingDelete] = useState(null) // folder
   const [deleting, setDeleting] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -109,7 +109,11 @@ export default function Files() {
     }
   }
 
-  // folders a folder may move into: anywhere except itself and its subtree
+  // folders a folder may move into: anywhere except itself and its subtree.
+  // Options carry the FULL path ("Riverside Pump Station / 2022 Rebid") so
+  // same-named folders in different places stay distinguishable, and sorting
+  // by path keeps siblings grouped. The current location is disabled - moving
+  // there would be a no-op.
   const moveOptions = useMemo(() => {
     if (!moving) return []
     const blocked = new Set(moving.kind === 'folder' ? [moving.id] : [])
@@ -126,13 +130,46 @@ export default function Files() {
         }
       }
     }
+    const byId = new Map(allFolders.map((f) => [f.folder_id, f]))
+    const pathOf = (f) => {
+      const parts = [f.name]
+      let cur = f
+      while (cur.parent_id && byId.has(cur.parent_id)) {
+        cur = byId.get(cur.parent_id)
+        parts.unshift(cur.name)
+      }
+      return parts.join(' / ')
+    }
+    const here = folderId ?? 'root'
     return [
-      { value: 'root', label: '/ (root)' },
+      { value: 'root', label: '/ (root)', disabled: here === 'root' },
       ...allFolders
         .filter((f) => !blocked.has(f.folder_id))
-        .map((f) => ({ value: f.folder_id, label: f.name })),
+        .map((f) => ({
+          value: f.folder_id,
+          label: pathOf(f),
+          disabled: f.folder_id === here,
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
     ]
-  }, [moving, allFolders])
+  }, [moving, allFolders, folderId])
+
+  // Path-aware search: "riverside/2022" or "riverside 2022" matches
+  // "Riverside Pump Station / 2022 Rebid" - every token must appear, in order.
+  function filterMoveOptions({ options, search }) {
+    const tokens = search.toLowerCase().split(/[/\s]+/).filter(Boolean)
+    if (!tokens.length) return options
+    return options.filter((o) => {
+      const label = o.label.toLowerCase()
+      let from = 0
+      for (const t of tokens) {
+        const at = label.indexOf(t, from)
+        if (at === -1) return false
+        from = at + t.length
+      }
+      return true
+    })
+  }
 
   async function handleMove() {
     setBusy(true)
@@ -262,7 +299,7 @@ export default function Files() {
                           leftSection={<IconArrowsMove size={14} />}
                           onClick={() => {
                             setMoving({ kind: 'folder', id: f.folder_id, name: f.name })
-                            setMoveTarget('root')
+                            setMoveTarget(null)
                           }}
                         >
                           Move
@@ -343,7 +380,7 @@ export default function Files() {
                               size="compact-xs"
                               onClick={() => {
                                 setMoving({ kind: 'file', id: f.file_id, name: f.filename })
-                                setMoveTarget('root')
+                                setMoveTarget(null)
                               }}
                             >
                               Move
@@ -432,16 +469,21 @@ export default function Files() {
         <Stack gap="sm">
           <Select
             label="Destination folder"
+            description="Type any part of the path — e.g. “riverside/2022”"
+            placeholder="Choose a destination…"
             data={moveOptions}
             value={moveTarget}
-            onChange={(v) => setMoveTarget(v ?? 'root')}
+            onChange={setMoveTarget}
+            filter={filterMoveOptions}
             searchable
+            nothingFoundMessage="No folder matches"
+            comboboxProps={{ transitionProps: { duration: 0 } }}
           />
           <Group justify="flex-end">
             <Button variant="default" onClick={() => setMoving(null)}>
               Cancel
             </Button>
-            <Button onClick={handleMove} loading={busy}>
+            <Button onClick={handleMove} loading={busy} disabled={!moveTarget}>
               Move
             </Button>
           </Group>
