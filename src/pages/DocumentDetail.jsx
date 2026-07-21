@@ -2,7 +2,7 @@ import { Button, SegmentedControl } from '@mantine/core'
 import { IconArrowLeft, IconTrash } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { confirmAndIngest, deleteFile, getExtraction } from '../api'
+import { confirmAndIngest, deleteFile, getExtraction, reextractFile } from '../api'
 import { ConfidenceBadge } from '../components/Badges'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DrawingViewer from '../components/DrawingViewer'
@@ -18,6 +18,7 @@ export default function DocumentDetail() {
   const [focused, setFocused] = useState(null)
   const [busy, setBusy] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [reextracting, setReextracting] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const toast = useToast()
   const navigate = useNavigate()
@@ -97,6 +98,25 @@ export default function DocumentDetail() {
     }
   }
 
+  async function handleReextract() {
+    setReextracting(true)
+    try {
+      const res = await reextractFile(fileId)
+      setChunks(res.chunks)
+      setStatus('extracted')
+      setEdits({})
+      setRejected(new Set())
+      setFocused(null)
+      toast.success(
+        `Re-read the drawing: ${res.chunks.length} regions found. Review and confirm to update the knowledge base.`,
+      )
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      setReextracting(false)
+    }
+  }
+
   async function handleDelete() {
     setDeleting(true)
     try {
@@ -141,6 +161,16 @@ export default function DocumentDetail() {
             {ingesting && (
               <Button loading disabled>
                 Processing…
+              </Button>
+            )}
+            {status === 'ingested' && (
+              <Button
+                variant="default"
+                loading={reextracting}
+                onClick={handleReextract}
+                title="Re-read this drawing with the current AI models — useful after model upgrades. You review the regions again before they replace the knowledge base entries."
+              >
+                Re-extract with latest AI
               </Button>
             )}
             <Button
