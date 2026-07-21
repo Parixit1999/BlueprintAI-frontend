@@ -1,4 +1,4 @@
-import { Button } from '@mantine/core'
+import { Button, SegmentedControl } from '@mantine/core'
 import { IconArrowLeft, IconTrash } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -31,7 +31,25 @@ export default function DocumentDetail() {
       .catch((e) => toast.error(e.message))
   }, [fileId])
 
+  const [regionFilter, setRegionFilter] = useState('all')
+
   const reviewing = status === 'extracted'
+
+  // Title blocks carry the identifying facts, so they lead; the original
+  // extraction index (i) stays attached because edits/rejections key on it.
+  const TYPE_ORDER = { title_block: 0, bom: 1, dimension: 2, note: 3 }
+  const visibleChunks = chunks
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => regionFilter === 'all' || c.region_type === regionFilter)
+    .sort(
+      (a, b) =>
+        (TYPE_ORDER[a.c.region_type] ?? 9) - (TYPE_ORDER[b.c.region_type] ?? 9) ||
+        a.i - b.i,
+    )
+  const typeCounts = chunks.reduce((acc, c) => {
+    acc[c.region_type] = (acc[c.region_type] ?? 0) + 1
+    return acc
+  }, {})
   const ingesting = status === 'ingesting'
 
   // Ingestion embeds every region (minutes for dense sheets). While it runs,
@@ -146,7 +164,23 @@ export default function DocumentDetail() {
           />
         </div>
         <div className="chunk-list">
-          {chunks.map((c, i) => (
+          <SegmentedControl
+            size="xs"
+            fullWidth
+            mb="xs"
+            value={regionFilter}
+            onChange={setRegionFilter}
+            data={[
+              { value: 'all', label: `All (${chunks.length})` },
+              ...['title_block', 'bom', 'dimension', 'note']
+                .filter((t) => typeCounts[t])
+                .map((t) => ({
+                  value: t,
+                  label: `${t === 'title_block' ? 'Title block' : t === 'bom' ? 'BOM' : t[0].toUpperCase() + t.slice(1) + 's'} (${typeCounts[t]})`,
+                })),
+            ]}
+          />
+          {visibleChunks.map(({ c, i }) => (
             <div
               key={i}
               className={[

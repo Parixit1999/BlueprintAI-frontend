@@ -1,3 +1,5 @@
+import { ActionIcon, Modal } from '@mantine/core'
+import { IconArrowsMaximize } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { getRender } from '../api'
 import Loading from './Loading'
@@ -8,11 +10,13 @@ const renderCache = new Map()
  * Shows the rendered drawing with an optional highlighted region.
  * bbox is in model-space coords; extents [xmin, ymin, xmax, ymax] map it to
  * percentage positions on the image (y is flipped: model space is y-up).
+ * Click the drawing (or the expand button) for a full-screen view.
  */
 export default function DrawingViewer({ fileId, highlightBbox, page = 1 }) {
   const cacheKey = `${fileId}:${page}`
   const [render, setRender] = useState(renderCache.get(cacheKey) ?? null)
   const [error, setError] = useState(null)
+  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     if (!fileId) return
@@ -46,9 +50,43 @@ export default function DrawingViewer({ fileId, highlightBbox, page = 1 }) {
   }
 
   return (
-    <div className="viewer">
-      <img src={render.url} alt="Drawing render" />
-      {highlight && <div className="viewer-highlight" style={highlight} />}
-    </div>
+    <>
+      <div
+        className="viewer expandable"
+        onClick={() => setExpanded(true)}
+        title="Click to view full screen"
+      >
+        <img src={render.url} alt="Drawing render" />
+        {highlight && <div className="viewer-highlight" style={highlight} />}
+        <ActionIcon
+          className="viewer-expand"
+          variant="default"
+          size="lg"
+          aria-label="View full screen"
+          onClick={(e) => {
+            e.stopPropagation()
+            setExpanded(true)
+          }}
+        >
+          <IconArrowsMaximize size={18} />
+        </ActionIcon>
+      </div>
+
+      <Modal
+        opened={expanded}
+        onClose={() => setExpanded(false)}
+        fullScreen
+        transitionProps={{ duration: 0 }}
+        title="Drawing view"
+        styles={{ body: { padding: 0 } }}
+      >
+        <div className="viewer-fullscreen">
+          <div className="viewer viewer-large">
+            <img src={render.url} alt="Drawing render, full screen" />
+            {highlight && <div className="viewer-highlight" style={highlight} />}
+          </div>
+        </div>
+      </Modal>
+    </>
   )
 }
