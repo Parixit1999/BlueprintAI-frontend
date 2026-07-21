@@ -469,6 +469,14 @@ tbody tr:last-child td {
   animation: refresh-rotate 0.6s linear infinite;
 }
 
+/* Version-aware retrieval: which drawing version answered, under the bubble */
+.version-context {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .cell-action .link-btn {
   margin-left: 0;
 }
