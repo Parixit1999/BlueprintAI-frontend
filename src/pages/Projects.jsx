@@ -19,12 +19,14 @@ export default function Projects() {
   const navigate = useNavigate()
 
   function refresh() {
-    listProjects()
+    return listProjects()
       .then(setProjects)
       .catch((e) => toast.error(e.message))
   }
 
-  useEffect(refresh, [])
+  useEffect(() => {
+    refresh()
+  }, [])
 
   async function handleCreate(e) {
     e.preventDefault()
@@ -54,6 +56,7 @@ export default function Projects() {
       <PageHeader
         title="Projects"
         description="Each project groups its drawings, drawing sets, and files"
+        onRefresh={refresh}
         actions={
           <Button leftSection={<IconFolderPlus size={16} />} onClick={open}>
             New project

@@ -56,10 +56,14 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null)
   const toast = useToast()
 
-  useEffect(() => {
-    getStats()
+  function refresh() {
+    return getStats()
       .then(setStats)
       .catch((e) => toast.error(e.message))
+  }
+
+  useEffect(() => {
+    refresh()
   }, [])
 
   if (!stats) return <Loading label="Loading statistics…" />
@@ -78,7 +82,11 @@ export default function Dashboard() {
 
   return (
     <div>
-      <PageHeader title="Dashboard" description="Overview of your drawing knowledge base" />
+      <PageHeader
+        title="Dashboard"
+        description="Overview of your drawing knowledge base"
+        onRefresh={refresh}
+      />
 
       <div className="tile-grid">
         <Tile label="Documents" value={stats.documents_total} hint={`${stats.documents_by_status.ingested ?? 0} ingested`} />

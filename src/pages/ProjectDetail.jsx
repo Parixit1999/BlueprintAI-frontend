@@ -34,12 +34,14 @@ export default function ProjectDetail() {
   const navigate = useNavigate()
 
   function refresh() {
-    getProject(projectId)
+    return getProject(projectId)
       .then(setProject)
       .catch((e) => toast.error(e.message))
   }
 
-  useEffect(refresh, [projectId])
+  useEffect(() => {
+    refresh()
+  }, [projectId])
 
   async function handleCreateDrawing(e) {
     e.preventDefault()
@@ -121,6 +123,7 @@ export default function ProjectDetail() {
         Projects
       </Button>
       <PageHeader
+        onRefresh={refresh}
         title={project.name}
         description={
           [project.number ? `Project #${project.number}` : null, project.description]

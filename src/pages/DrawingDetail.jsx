@@ -43,7 +43,7 @@ export default function DrawingDetail() {
   const navigate = useNavigate()
 
   function refresh() {
-    getDrawing(drawingId)
+    return getDrawing(drawingId)
       .then((d) => {
         setDrawing(d)
         setForm({
@@ -57,7 +57,9 @@ export default function DrawingDetail() {
       .catch((e) => toast.error(e.message))
   }
 
-  useEffect(refresh, [drawingId])
+  useEffect(() => {
+    refresh()
+  }, [drawingId])
 
   async function handleSave(e) {
     e.preventDefault()
@@ -166,6 +168,7 @@ export default function DrawingDetail() {
         {drawing.project_name ?? 'Projects'}
       </Button>
       <PageHeader
+        onRefresh={refresh}
         title={drawing.dwg_number ?? 'Drawing'}
         description={drawing.description ?? undefined}
         actions={

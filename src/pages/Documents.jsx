@@ -62,12 +62,14 @@ export default function Documents() {
   }
 
   function refresh() {
-    listFiles()
+    return listFiles()
       .then(setFiles)
       .catch((e) => toast.error(e.message))
   }
 
-  useEffect(refresh, [])
+  useEffect(() => {
+    refresh()
+  }, [])
 
   const types = useMemo(
     () => [...new Set((files ?? []).map((f) => f.file_type))].sort(),
@@ -109,6 +111,7 @@ export default function Documents() {
       <PageHeader
         title="Documents"
         description="Engineering drawings in the knowledge base"
+        onRefresh={refresh}
         actions={
           <Button leftSection={<IconUpload size={16} />} onClick={() => navigate('/upload')}>
             Upload drawings

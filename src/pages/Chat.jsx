@@ -144,6 +144,13 @@ export default function Chat() {
       .catch((e) => toast.error(e.message))
   }, [])
 
+  function refreshChats() {
+    return Promise.all([
+      listChatSessions().then(setSessions),
+      active ? getChatMessages(active).then((res) => setMessages(res.messages)) : Promise.resolve(),
+    ]).catch((e) => toast.error(e.message))
+  }
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, busy])
@@ -250,6 +257,7 @@ export default function Chat() {
       <PageHeader
         title="Chat"
         description="Ask questions about your drawings — every answer cites its source regions"
+        onRefresh={refreshChats}
         mb="md"
       />
       <div className={sourceOpen ? 'chat-layout panel-open' : 'chat-layout'}>
