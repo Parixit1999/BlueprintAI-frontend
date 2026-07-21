@@ -3,7 +3,7 @@ import { createContext, useContext, useRef, useState } from 'react'
 import { uploadFile } from '../api'
 import { useToast } from '../components/Toast'
 
-export const SUPPORTED = ['dxf', 'pdf', 'png', 'jpg', 'jpeg']
+export const SUPPORTED = ['dxf', 'dwg', 'rvt', 'pdf', 'png', 'jpg', 'jpeg', 'tif', 'tiff', 'bmp', 'webp']
 export const ext = (name) => name.split('.').pop().toLowerCase()
 const basename = (path) => path.split('/').pop()
 
