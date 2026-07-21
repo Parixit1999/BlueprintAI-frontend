@@ -62,10 +62,15 @@ export function UploadQueueProvider({ children }) {
       if (!next) break
       patch(next.id, { status: 'uploading', percent: 0 })
       try {
-        const res = await uploadFile(next.file, next.name, (p) => {
-          if (p.phase === 'uploading') patch(next.id, { status: 'uploading', percent: p.percent })
-          else patch(next.id, { status: 'processing' })
-        })
+        const res = await uploadFile(
+          next.file,
+          next.name,
+          (p) => {
+            if (p.phase === 'uploading') patch(next.id, { status: 'uploading', percent: p.percent })
+            else patch(next.id, { status: 'processing' })
+          },
+          next.folderId ?? null,
+        )
         patch(next.id, { status: 'done', fileId: res.file_id, regions: res.chunks.length })
       } catch (e) {
         patch(next.id, { status: 'error', error: e.message })
@@ -74,7 +79,7 @@ export function UploadQueueProvider({ children }) {
     runningRef.current = false
   }
 
-  async function enqueue(files) {
+  async function enqueue(files, folderId = null) {
     setExpanding(true)
     const additions = []
     for (const file of files) {
@@ -92,6 +97,7 @@ export function UploadQueueProvider({ children }) {
               name,
               file: blob,
               source: file.name,
+              folderId,
               status: supported ? 'queued' : 'skipped',
             })
           }
@@ -104,6 +110,7 @@ export function UploadQueueProvider({ children }) {
           id: ++uid,
           name: file.name,
           file,
+          folderId,
           status: supported ? 'queued' : 'skipped',
         })
       }

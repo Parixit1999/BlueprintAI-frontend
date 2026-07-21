@@ -27,11 +27,12 @@ async function request(path, options = {}) {
 // Uploaded via XHR (not fetch) so we can report real progress. onProgress gets
 // { phase: 'uploading', percent } while bytes transfer, then { phase: 'processing' }
 // once the request is fully sent and the server is extracting (vision/LLM/parse).
-export function uploadFile(file, filename, onProgress) {
+export function uploadFile(file, filename, onProgress, folderId = null) {
   return new Promise((resolve, reject) => {
     const form = new FormData()
     if (filename) form.append('file', file, filename)
     else form.append('file', file)
+    if (folderId) form.append('folder_id', folderId)
 
     const xhr = new XMLHttpRequest()
     xhr.open('POST', `${API_BASE}/files/upload`)
@@ -209,5 +210,59 @@ export function rateChatMessage(sessionId, messageId, rating) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ rating }),
+  })
+}
+
+// --- File manager ---
+
+export function browseFolder(folderId = null) {
+  return request(folderId ? `/folders/browse?folder_id=${folderId}` : '/folders/browse')
+}
+
+export function listFolders() {
+  return request('/folders')
+}
+
+export function createFolder(name, parentId = null) {
+  return request('/folders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, parent_id: parentId }),
+  })
+}
+
+export function renameFolder(folderId, name) {
+  return request(`/folders/${folderId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
+}
+
+export function moveFolder(folderId, parentId) {
+  return request(`/folders/${folderId}/move`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ parent_id: parentId }),
+  })
+}
+
+export function deleteFolder(folderId) {
+  return request(`/folders/${folderId}`, { method: 'DELETE' })
+}
+
+export function renameFile(fileId, filename) {
+  return request(`/files/${fileId}/name`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename }),
+  })
+}
+
+export function moveFile(fileId, folderId) {
+  return request(`/files/${fileId}/move`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ folder_id: folderId }),
   })
 }

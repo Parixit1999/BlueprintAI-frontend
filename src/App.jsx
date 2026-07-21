@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard'
 import DocumentDetail from './pages/DocumentDetail'
 import Documents from './pages/Documents'
 import DrawingDetail from './pages/DrawingDetail'
+import Files from './pages/Files'
 import ProjectDetail from './pages/ProjectDetail'
 import Projects from './pages/Projects'
 import Upload from './pages/Upload'
@@ -26,6 +27,7 @@ export default function App() {
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/:projectId" element={<ProjectDetail />} />
               <Route path="/drawings/:drawingId" element={<DrawingDetail />} />
+              <Route path="/files" element={<Files />} />
               <Route path="/upload" element={<Upload />} />
               <Route path="/documents" element={<Documents />} />
               <Route path="/documents/:fileId" element={<DocumentDetail />} />

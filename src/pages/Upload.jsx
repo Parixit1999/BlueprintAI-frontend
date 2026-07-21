@@ -22,7 +22,7 @@ import {
   IconUpload,
   IconX,
 } from '@tabler/icons-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import {
   STATUS,
@@ -33,10 +33,12 @@ import {
 
 export default function Upload() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const uploadFolderId = searchParams.get('folder')
   const {
     items,
     expanding,
-    enqueue: handleDrop,
+    enqueue,
     clearFinished,
     removeItem,
     total,
@@ -45,11 +47,17 @@ export default function Upload() {
     active,
   } = useUploadQueue()
 
+  const handleDrop = (files) => enqueue(files, uploadFolderId)
+
   return (
     <Box>
       <PageHeader
         title="Upload drawings"
-        description="Add CAD (.dxf), PDFs (vector or scanned), or drawing images. Drop many files at once, or a .zip archive of drawings for bulk import."
+        description={
+          uploadFolderId
+            ? 'Files uploaded here land in the selected folder in Files.'
+            : 'Add CAD (.dxf), PDFs (vector or scanned), or drawing images. Drop many files at once, or a .zip archive of drawings for bulk import.'
+        }
       />
 
       <Dropzone
