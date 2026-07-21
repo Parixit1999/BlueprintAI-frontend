@@ -206,12 +206,13 @@ export default function Upload() {
                 <Group
                   key={item.id}
                   justify="space-between"
+                  align="flex-start"
                   wrap="nowrap"
                   px="sm"
                   py={8}
                   style={{ border: '1px solid var(--mantine-color-gray-2)', borderRadius: 8 }}
                 >
-                  <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
+                  <Group gap="sm" wrap="nowrap" align="flex-start" style={{ minWidth: 0 }}>
                     <ThemeIcon variant="light" color={s.color} size="md" radius="md">
                       {item.status === 'done' ? (
                         <IconCheck size={16} />
@@ -229,15 +230,19 @@ export default function Upload() {
                       <Text size="sm" fw={500} truncate>
                         {item.name}
                       </Text>
-                      <Text size="xs" c="dimmed" truncate>
-                        {item.status === 'error'
-                          ? item.error
-                          : item.status === 'done'
+                      {item.status === 'error' ? (
+                        <Text size="xs" c="red.7" style={{ lineHeight: 1.4 }}>
+                          {item.error}
+                        </Text>
+                      ) : (
+                        <Text size="xs" c="dimmed" truncate>
+                          {item.status === 'done'
                             ? `${item.regions} regions extracted`
                             : item.source
                               ? `from ${item.source}`
                               : ext(item.name).toUpperCase()}
-                      </Text>
+                        </Text>
+                      )}
                     </div>
                   </Group>
                   <Group gap="xs" wrap="nowrap">
