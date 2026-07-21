@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { createDrawing, createSet, deleteProject, deleteSet, getProject } from '../api'
 import ConfirmDialog from '../components/ConfirmDialog'
+import ErrorState from '../components/ErrorState'
 import Loading from '../components/Loading'
 import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
@@ -23,6 +24,7 @@ import { useToast } from '../components/Toast'
 export default function ProjectDetail() {
   const { projectId } = useParams()
   const [project, setProject] = useState(null)
+  const [loadError, setLoadError] = useState(null)
   const [drawingModal, drawingModalCtl] = useDisclosure(false)
   const [setModal, setModalCtl] = useDisclosure(false)
   const [pendingDelete, setPendingDelete] = useState(false)
@@ -35,8 +37,11 @@ export default function ProjectDetail() {
 
   function refresh() {
     return getProject(projectId)
-      .then(setProject)
-      .catch((e) => toast.error(e.message))
+      .then((p) => {
+        setProject(p)
+        setLoadError(null)
+      })
+      .catch((e) => (project ? toast.error(e.message) : setLoadError(e.message)))
   }
 
   useEffect(() => {
@@ -108,6 +113,7 @@ export default function ProjectDetail() {
     }
   }
 
+  if (project === null && loadError) return <ErrorState message={loadError} onRetry={refresh} />
   if (project === null) return <Loading label="Loading project…" />
 
   return (

@@ -30,7 +30,14 @@ export default function DrawingViewer({ fileId, highlightBbox, page = 1 }) {
       .catch((e) => setError(e.message))
   }, [fileId, page, cacheKey])
 
-  if (error) return <p className="error">Drawing preview unavailable: {error}</p>
+  if (error) {
+    return (
+      <div className="viewer-error">
+        <p className="error">We couldn’t load this drawing preview.</p>
+        <p className="muted">{error}</p>
+      </div>
+    )
+  }
   if (!render) return <Loading label="Rendering drawing…" py="lg" size="sm" />
 
   const [xmin, ymin, xmax, ymax] = render.extents
