@@ -203,3 +203,11 @@ export function renameChatSession(sessionId, title) {
 export function deleteChatSession(sessionId) {
   return request(`/chats/${sessionId}`, { method: 'DELETE' })
 }
+
+export function rateChatMessage(sessionId, messageId, rating) {
+  return request(`/chats/${sessionId}/messages/${messageId}/feedback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rating }),
+  })
+}
