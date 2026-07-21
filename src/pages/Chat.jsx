@@ -19,7 +19,7 @@ import {
   listProjects,
   rateChatMessage,
   renameChatSession,
-  sendChatMessage,
+  streamChatMessage,
 } from '../api'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DrawingViewer from '../components/DrawingViewer'
@@ -107,7 +107,17 @@ function sourceLabels(sources) {
   return labels
 }
 
-function AssistantMessage({ messageId, content, evidence, versionContext, feedback, onOpenSource, onRate }) {
+// Staged status lines shown while an answer streams in: retrieval first,
+// then generation. The evidence arrives before the first word of the answer.
+function streamingStatus(phase, sourceCount) {
+  if (phase === 'searching') return 'Searching your drawings…'
+  if (sourceCount > 0) {
+    return `Found ${sourceCount} source${sourceCount > 1 ? 's' : ''} — writing the answer…`
+  }
+  return 'Writing the answer…'
+}
+
+function AssistantMessage({ messageId, content, evidence, versionContext, feedback, streaming, phase, onOpenSource, onRate }) {
   const [open, setOpen] = useState(false)
   const sources = dedupeEvidence(evidence)
   const combined = sourceLabels(sources)
@@ -115,6 +125,14 @@ function AssistantMessage({ messageId, content, evidence, versionContext, feedba
     <div className="msg msg-assistant">
       <div className="assistant-avatar">B</div>
       <div className="assistant-body">
+        {streaming && !content ? (
+          <div className="msg-bubble thinking">
+            <span className="status-phrase">{streamingStatus(phase, sources.length)}</span>
+            <span className="dot" />
+            <span className="dot" />
+            <span className="dot" />
+          </div>
+        ) : (
         <div className="msg-bubble markdown-body">
           <Markdown
             remarkPlugins={[remarkGfm]}
@@ -129,7 +147,9 @@ function AssistantMessage({ messageId, content, evidence, versionContext, feedba
           >
             {content}
           </Markdown>
+          {streaming && <span className="stream-cursor" />}
         </div>
+        )}
         {combined.length > 1 && (
           <div className="version-context">
             Combined from {combined.length} sources: {combined.join(' · ')}
@@ -144,7 +164,7 @@ function AssistantMessage({ messageId, content, evidence, versionContext, feedba
               .join('; ')}
           </div>
         )}
-        {onRate && (
+        {onRate && !streaming && (
           <div className="feedback-row">
             <ActionIcon
               variant={feedback === 1 ? 'filled' : 'subtle'}
@@ -336,17 +356,53 @@ export default function Chat() {
 
     setInput('')
     setBusy(true)
-    setMessages((m) => [...m, { message_id: 'pending-user', role: 'user', content: question }])
+    setMessages((m) => [
+      ...m,
+      { message_id: 'pending-user', role: 'user', content: question },
+      {
+        message_id: 'streaming',
+        role: 'assistant',
+        content: '',
+        evidence: [],
+        version_context: null,
+        streaming: true,
+        phase: 'searching',
+      },
+    ])
+    let streamError = null
     try {
-      const res = await sendChatMessage(sessionId, question, projectScope)
-      setMessages((m) => [
-        ...m.filter((x) => x.message_id !== 'pending-user'),
-        res.user_message,
-        res.assistant_message,
-      ])
+      // evidence arrives first (meta), then the answer streams token by token
+      await streamChatMessage(sessionId, question, projectScope, {
+        meta: (d) =>
+          setMessages((m) =>
+            m.map((x) =>
+              x.message_id === 'streaming'
+                ? { ...x, phase: 'writing', evidence: d.evidence, version_context: d.version_context }
+                : x.message_id === 'pending-user'
+                  ? d.user_message
+                  : x,
+            ),
+          ),
+        token: (d) =>
+          setMessages((m) =>
+            m.map((x) =>
+              x.message_id === 'streaming' ? { ...x, content: x.content + d.t } : x,
+            ),
+          ),
+        done: (d) =>
+          setMessages((m) =>
+            m.map((x) => (x.message_id === 'streaming' ? d.assistant_message : x)),
+          ),
+        error: (d) => {
+          streamError = d?.detail || 'Generation failed'
+        },
+      })
+      if (streamError) throw new Error(streamError)
       listChatSessions().then(setSessions)
     } catch (err) {
-      setMessages((m) => m.filter((x) => x.message_id !== 'pending-user'))
+      setMessages((m) =>
+        m.filter((x) => x.message_id !== 'pending-user' && x.message_id !== 'streaming'),
+      )
       setInput(question)
       toast.error(err.message)
     } finally {
@@ -425,22 +481,12 @@ export default function Chat() {
                 evidence={m.evidence}
                 versionContext={m.version_context}
                 feedback={m.feedback}
+                streaming={m.streaming}
+                phase={m.phase}
                 onOpenSource={setSourceOpen}
                 onRate={handleRate}
               />
             ),
-          )}
-          {busy && (
-            <div className="msg msg-assistant">
-              <div className="assistant-avatar">B</div>
-              <div className="assistant-body">
-                <div className="msg-bubble thinking">
-                  <span className="dot" />
-                  <span className="dot" />
-                  <span className="dot" />
-                </div>
-              </div>
-            </div>
           )}
           <div ref={bottomRef} />
         </div>
