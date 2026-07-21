@@ -90,6 +90,10 @@ export function deleteFile(fileId) {
   return request(`/files/${fileId}`, { method: 'DELETE' })
 }
 
+export function retryExtraction(fileId) {
+  return request(`/files/${fileId}/retry`, { method: 'POST' })
+}
+
 export function getStats() {
   return request('/stats')
 }

@@ -4,6 +4,7 @@ const STATUS_LABEL = {
   extracted: 'Needs review',
   reviewed: 'Reviewed',
   ingested: 'Ingested',
+  failed: 'Failed',
 }
 
 export function ConfidenceBadge({ level }) {

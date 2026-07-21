@@ -2,7 +2,7 @@ import { Button } from '@mantine/core'
 import { IconUpload } from '@tabler/icons-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { deleteFile, listFiles } from '../api'
+import { deleteFile, listFiles, retryExtraction } from '../api'
 import { StatusBadge } from '../components/Badges'
 import CompareModal from '../components/CompareModal'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -14,6 +14,7 @@ const STATUS_OPTIONS = [
   { value: 'all', label: 'All statuses' },
   { value: 'extracted', label: 'Needs review' },
   { value: 'ingested', label: 'Ingested' },
+  { value: 'failed', label: 'Failed' },
 ]
 
 export default function Documents() {
@@ -27,8 +28,23 @@ export default function Documents() {
   const [pendingDelete, setPendingDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const [comparing, setComparing] = useState(null)
+  const [retryingId, setRetryingId] = useState(null)
   const toast = useToast()
   const navigate = useNavigate()
+
+  async function handleRetry(file) {
+    setRetryingId(file.file_id)
+    try {
+      const res = await retryExtraction(file.file_id)
+      toast.success(`Extracted ${res.chunks.length} regions from ${file.filename}.`)
+      refresh()
+    } catch (e) {
+      toast.error(e.message)
+      refresh() // error message on the row may have changed
+    } finally {
+      setRetryingId(null)
+    }
+  }
 
   function setFilter(key, value) {
     setSearchParams(
@@ -192,6 +208,9 @@ export default function Documents() {
                           {Math.round(match.similarity * 100)}% similar to {match.filename}
                         </div>
                       )}
+                      {f.status === 'failed' && f.error && (
+                        <div className="error-match">{f.error}</div>
+                      )}
                     </td>
                     <td className="cell-type">{f.file_type.toUpperCase()}</td>
                     <td>
@@ -210,13 +229,24 @@ export default function Documents() {
                             Compare
                           </Button>
                         )}
-                        <Button
-                          variant="subtle"
-                          size="compact-sm"
-                          onClick={() => navigate(`/documents/${f.file_id}`)}
-                        >
-                          {f.status === 'extracted' ? 'Review' : 'View'}
-                        </Button>
+                        {f.status === 'failed' ? (
+                          <Button
+                            variant="subtle"
+                            size="compact-sm"
+                            loading={retryingId === f.file_id}
+                            onClick={() => handleRetry(f)}
+                          >
+                            Retry
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="subtle"
+                            size="compact-sm"
+                            onClick={() => navigate(`/documents/${f.file_id}`)}
+                          >
+                            {f.status === 'extracted' ? 'Review' : 'View'}
+                          </Button>
+                        )}
                         <Button
                           variant="subtle"
                           color="red"
