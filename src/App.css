@@ -743,6 +743,7 @@ tbody tr.no-hover:hover {
   background: rgba(250, 178, 25, 0.14);
 }
 
+.badge-status-ingesting,
 .badge-status-uploaded,
 .badge-status-reviewed {
   color: var(--ink-2);

@@ -32,6 +32,20 @@ export default function DocumentDetail() {
   }, [fileId])
 
   const reviewing = status === 'extracted'
+  const ingesting = status === 'ingesting'
+
+  // Ingestion embeds every region (minutes for dense sheets). While it runs,
+  // poll so the page flips to the finished state on its own - including when
+  // the user navigated away mid-ingest and came back.
+  useEffect(() => {
+    if (!ingesting) return
+    const timer = setInterval(() => {
+      getExtraction(fileId)
+        .then((res) => setStatus(res.status))
+        .catch(() => {})
+    }, 4000)
+    return () => clearInterval(timer)
+  }, [ingesting, fileId])
 
   function toggleReject(i) {
     const next = new Set(rejected)
@@ -41,6 +55,7 @@ export default function DocumentDetail() {
 
   async function confirm() {
     setBusy(true)
+    setStatus('ingesting') // reflect the claim immediately; polling takes over
     try {
       const corrections = Object.fromEntries(
         Object.entries(edits).filter(([i, v]) => v !== (chunks[i].chunk_text ?? '')),
@@ -48,13 +63,17 @@ export default function DocumentDetail() {
       const res = await confirmAndIngest(fileId, corrections, [...rejected])
       setStatus('ingested')
       toast.success(
-        `Ingested ${res.ingested_chunks} region${res.ingested_chunks === 1 ? '' : 's'}` +
+        `Added ${res.ingested_chunks} region${res.ingested_chunks === 1 ? '' : 's'} to the knowledge base` +
           (Object.keys(corrections).length ? ` with ${Object.keys(corrections).length} correction(s)` : '') +
           (res.rejected ? `, ${res.rejected} rejected` : '') +
           '.',
       )
     } catch (e) {
-      toast.error(e.message)
+      // a concurrent confirm already claimed it - the poll will finish the job
+      if (!/already being added|already in the knowledge base/i.test(e.message)) {
+        setStatus('extracted')
+        toast.error(e.message)
+      }
     } finally {
       setBusy(false)
     }
@@ -90,13 +109,20 @@ export default function DocumentDetail() {
         description={
           reviewing
             ? 'Verify each region against the drawing. Click a region to highlight it; correct or reject anything wrong, then confirm.'
-            : undefined
+            : ingesting
+              ? 'Adding this document to the knowledge base — this can take a few minutes for large drawings. You can leave this page; we’ll keep working in the background.'
+              : undefined
         }
         actions={
           <>
             {reviewing && chunks.length > 0 && (
               <Button loading={busy} onClick={confirm}>
                 Confirm & ingest
+              </Button>
+            )}
+            {ingesting && (
+              <Button loading disabled>
+                Processing…
               </Button>
             )}
             <Button

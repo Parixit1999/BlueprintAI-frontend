@@ -2,6 +2,7 @@ const CONFIDENCE_LABEL = { high: 'High', medium: 'Medium', low: 'Low' }
 const STATUS_LABEL = {
   uploaded: 'Uploaded',
   extracted: 'Needs review',
+  ingesting: 'Processing',
   reviewed: 'Reviewed',
   ingested: 'Ingested',
   failed: 'Failed',
