@@ -743,6 +743,7 @@ tbody tr.no-hover:hover {
   background: rgba(250, 178, 25, 0.14);
 }
 
+.badge-status-ingesting,
 .badge-status-uploaded,
 .badge-status-reviewed {
   color: var(--ink-2);
@@ -810,6 +811,41 @@ tbody tr.no-hover:hover {
   display: block;
   max-width: 100%;
   height: auto;
+}
+
+/* click-to-expand affordance on the inline viewer */
+.viewer.expandable {
+  cursor: zoom-in;
+}
+
+.viewer-expand {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.viewer.expandable:hover .viewer-expand {
+  opacity: 1;
+}
+
+/* full-screen drawing view: large, scrollable in both directions */
+.viewer-fullscreen {
+  overflow: auto;
+  height: calc(100vh - 60px);
+  padding: 16px;
+  background: var(--page);
+}
+
+.viewer-large {
+  margin: 0 auto;
+  width: fit-content;
+}
+
+.viewer-large img {
+  max-width: none;
+  width: min(2400px, 180vw);
 }
 
 .viewer-highlight {

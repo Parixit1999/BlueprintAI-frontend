@@ -7,10 +7,11 @@ import {
   Select,
   Stack,
   Text,
+  TextInput,
 } from '@mantine/core'
-import { IconFile, IconFolder, IconSparkles } from '@tabler/icons-react'
+import { IconFile, IconFolder, IconFolderPlus, IconSparkles } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
-import { assignFile, getFileSuggestions, listProjects } from '../api'
+import { assignFile, createProject, getFileSuggestions, listProjects } from '../api'
 import Loading from './Loading'
 import { useToast } from './Toast'
 
@@ -24,6 +25,9 @@ export default function AssignModal({ file, onClose, onAssigned }) {
   const [suggestions, setSuggestions] = useState(null)
   const [projects, setProjects] = useState([])
   const [manualProject, setManualProject] = useState(null)
+  const [creating, setCreating] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newNumber, setNewNumber] = useState('')
   const [busy, setBusy] = useState(false)
   const toast = useToast()
 
@@ -168,32 +172,90 @@ export default function AssignModal({ file, onClose, onAssigned }) {
             )}
 
           <Divider label="Or assign manually" labelPosition="center" />
-          <Group wrap="nowrap" align="flex-end">
-            <Select
-              label="Project"
-              placeholder={projects.length ? 'Choose a project…' : 'No projects yet'}
-              data={projects.map((p) => ({
-                value: p.project_id,
-                label: p.number ? `${p.name} (#${p.number})` : p.name,
-              }))}
-              value={manualProject}
-              onChange={setManualProject}
-              searchable
-              style={{ flex: 1 }}
-            />
+          {!creating && (
+            <Group wrap="nowrap" align="flex-end">
+              <Select
+                label="Project"
+                placeholder={projects.length ? 'Choose a project…' : 'No projects yet'}
+                data={projects.map((p) => ({
+                  value: p.project_id,
+                  label: p.number ? `${p.name} (#${p.number})` : p.name,
+                }))}
+                value={manualProject}
+                onChange={setManualProject}
+                searchable
+                style={{ flex: 1 }}
+              />
+              <Button
+                disabled={!manualProject}
+                loading={busy}
+                onClick={() =>
+                  doAssign(
+                    { new_drawing: { project_id: manualProject } },
+                    'File assigned as a new drawing.',
+                  )
+                }
+              >
+                Assign
+              </Button>
+            </Group>
+          )}
+          {creating ? (
+            <Stack gap="xs">
+              <Group wrap="nowrap" grow>
+                <TextInput
+                  label="New project name"
+                  placeholder="e.g. Riverside Pump Station Rehabilitation"
+                  value={newName}
+                  onChange={(e) => setNewName(e.currentTarget.value)}
+                  autoFocus
+                />
+                <TextInput
+                  label="Project number (optional)"
+                  placeholder="e.g. 1234"
+                  value={newNumber}
+                  onChange={(e) => setNewNumber(e.currentTarget.value)}
+                />
+              </Group>
+              <Group justify="flex-end" gap="xs">
+                <Button variant="default" onClick={() => setCreating(false)}>
+                  Back
+                </Button>
+                <Button
+                  disabled={!newName.trim()}
+                  loading={busy}
+                  onClick={async () => {
+                    setBusy(true)
+                    try {
+                      const p = await createProject({
+                        name: newName.trim(),
+                        number: newNumber.trim() || null,
+                      })
+                      await doAssign(
+                        { new_drawing: { project_id: p.project_id } },
+                        `Created "${p.name}" and assigned the file to it.`,
+                      )
+                    } catch (e) {
+                      toast.error(e.message)
+                      setBusy(false)
+                    }
+                  }}
+                >
+                  Create & assign
+                </Button>
+              </Group>
+            </Stack>
+          ) : (
             <Button
-              disabled={!manualProject}
-              loading={busy}
-              onClick={() =>
-                doAssign(
-                  { new_drawing: { project_id: manualProject } },
-                  'File assigned as a new drawing.',
-                )
-              }
+              variant="subtle"
+              size="compact-sm"
+              leftSection={<IconFolderPlus size={15} />}
+              style={{ alignSelf: 'flex-start' }}
+              onClick={() => setCreating(true)}
             >
-              Assign
+              Create a new project for this file
             </Button>
-          </Group>
+          )}
         </Stack>
       )}
     </Modal>
