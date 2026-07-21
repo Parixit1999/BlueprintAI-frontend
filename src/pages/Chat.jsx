@@ -413,7 +413,17 @@ export default function Chat() {
                     {sourceOpen.dwg_number}
                   </Badge>
                 )}
-                {[sourceOpen.filename, sourceOpen.project_name].filter(Boolean).join(' · ')}
+                {[
+                  sourceOpen.filename,
+                  sourceOpen.project_name && `Project: ${sourceOpen.project_name}`,
+                  sourceOpen.set_number && `Set ${sourceOpen.set_number}`,
+                  (sourceOpen.drawing_date || sourceOpen.year) &&
+                    `Version: ${sourceOpen.drawing_date || sourceOpen.year}${
+                      sourceOpen.version_note ? ` (${sourceOpen.version_note})` : ''
+                    }`,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
               </p>
             )}
             <p className="evidence-score muted">Relevance score {sourceOpen.score}</p>
