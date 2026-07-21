@@ -87,7 +87,7 @@ function dedupeEvidence(evidence) {
   return out
 }
 
-function AssistantMessage({ content, evidence, onOpenSource }) {
+function AssistantMessage({ content, evidence, versionContext, onOpenSource }) {
   const [open, setOpen] = useState(false)
   const sources = dedupeEvidence(evidence)
   return (
@@ -97,6 +97,15 @@ function AssistantMessage({ content, evidence, onOpenSource }) {
         <div className="msg-bubble">
           <p>{content}</p>
         </div>
+        {versionContext && (
+          <div className="version-context">
+            Answer based on version <Badge variant="light" size="sm">{versionContext.used.label}</Badge>
+            {' '}· other version{versionContext.other_versions.length > 1 ? 's' : ''}:{' '}
+            {versionContext.other_versions
+              .map((v) => v.label + (v.also_matched ? ' (also matched this question)' : ''))
+              .join('; ')}
+          </div>
+        )}
         {sources.length > 0 && (
           <div className="sources">
             <button className="sources-toggle" onClick={() => setOpen((v) => !v)}>
@@ -333,6 +342,7 @@ export default function Chat() {
                 key={m.message_id}
                 content={m.content}
                 evidence={m.evidence}
+                versionContext={m.version_context}
                 onOpenSource={setSourceOpen}
               />
             ),
