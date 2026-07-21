@@ -1,6 +1,6 @@
-import { ActionIcon, Modal } from '@mantine/core'
-import { IconArrowsMaximize } from '@tabler/icons-react'
-import { useEffect, useState } from 'react'
+import { ActionIcon, Button, Group, Modal, Text } from '@mantine/core'
+import { IconArrowsMaximize, IconMinus, IconPlus } from '@tabler/icons-react'
+import { useEffect, useRef, useState } from 'react'
 import { getRender } from '../api'
 import Loading from './Loading'
 
@@ -17,6 +17,32 @@ export default function DrawingViewer({ fileId, highlightBbox, page = 1 }) {
   const [render, setRender] = useState(renderCache.get(cacheKey) ?? null)
   const [error, setError] = useState(null)
   const [expanded, setExpanded] = useState(false)
+  // 'fit' = drawing fits the screen width; numbers are multiples of that
+  const [zoom, setZoom] = useState('fit')
+  const scrollRef = useRef(null)
+  const pan = useRef(null)
+
+  const zoomIn = () =>
+    setZoom((z) => (z === 'fit' ? 1.5 : Math.min(6, +(z * 1.3).toFixed(2))))
+  const zoomOut = () =>
+    setZoom((z) => (z === 'fit' || z / 1.3 <= 1.02 ? 'fit' : +(z / 1.3).toFixed(2)))
+
+  // drag anywhere on the drawing to pan (scrollbars also work)
+  const startPan = (e) => {
+    const el = scrollRef.current
+    if (!el) return
+    pan.current = { x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop }
+    el.setPointerCapture?.(e.pointerId)
+  }
+  const movePan = (e) => {
+    const el = scrollRef.current
+    if (!el || !pan.current) return
+    el.scrollLeft = pan.current.left - (e.clientX - pan.current.x)
+    el.scrollTop = pan.current.top - (e.clientY - pan.current.y)
+  }
+  const endPan = () => {
+    pan.current = null
+  }
 
   useEffect(() => {
     if (!fileId) return
@@ -84,12 +110,40 @@ export default function DrawingViewer({ fileId, highlightBbox, page = 1 }) {
         onClose={() => setExpanded(false)}
         fullScreen
         transitionProps={{ duration: 0 }}
-        title="Drawing view"
+        title={
+          <Group gap="xs">
+            <Text size="sm" fw={600} mr="sm">
+              Drawing view
+            </Text>
+            <ActionIcon variant="default" aria-label="Zoom out" onClick={zoomOut}>
+              <IconMinus size={16} />
+            </ActionIcon>
+            <Text size="sm" w={52} ta="center" c="dimmed">
+              {zoom === 'fit' ? 'Fit' : `${Math.round(zoom * 100)}%`}
+            </Text>
+            <ActionIcon variant="default" aria-label="Zoom in" onClick={zoomIn}>
+              <IconPlus size={16} />
+            </ActionIcon>
+            <Button size="compact-xs" variant="default" onClick={() => setZoom('fit')}>
+              Fit to screen
+            </Button>
+          </Group>
+        }
         styles={{ body: { padding: 0 } }}
       >
-        <div className="viewer-fullscreen">
-          <div className="viewer viewer-large">
-            <img src={render.url} alt="Drawing render, full screen" />
+        <div
+          className="viewer-fullscreen"
+          ref={scrollRef}
+          onPointerDown={startPan}
+          onPointerMove={movePan}
+          onPointerUp={endPan}
+          onPointerLeave={endPan}
+        >
+          <div
+            className="viewer viewer-large"
+            style={{ width: zoom === 'fit' ? '100%' : `${zoom * 100}%` }}
+          >
+            <img src={render.url} alt="Drawing render, full screen" draggable={false} />
             {highlight && <div className="viewer-highlight" style={highlight} />}
           </div>
         </div>
