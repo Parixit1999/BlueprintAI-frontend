@@ -14,6 +14,14 @@ drawings, with persistent sessions and verifiable evidence.
   region highlighted (`DrawingViewer`).
 - **Send** posts to `POST /chats/:id/messages`; a new session is created lazily on
   first send. Optimistic pending-user bubble + animated typing dots.
+- **Project scope** (Phase 2 integration): a "Search scope" Select in the
+  sessions sidebar (All projects / one project). The chosen `project_id` is sent
+  with each question and the backend restricts retrieval to files attached to
+  that project's drawings. Scoped questions whose answer lives elsewhere return
+  "couldn't find" with zero sources.
+- **Evidence context**: source rows show the DWG number when the file is
+  assigned (falls back to region type); the evidence panel shows a DWG badge,
+  filename, and project name.
 
 Note: retrieval is document-scoped on the backend, so all sources for one answer
 come from a single drawing (no cross-document contamination); off-topic questions
