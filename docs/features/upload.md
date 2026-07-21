@@ -3,6 +3,17 @@
 `src/pages/Upload.jsx`. Dedicated page for adding drawings, with drag-and-drop,
 multi-file, ZIP archives, and a live progress queue.
 
+## App-level queue (survives navigation)
+The queue state and worker live in `src/context/UploadQueueContext.jsx`
+(`UploadQueueProvider`, mounted in `App.jsx` above the router), NOT in the
+Upload page. So an in-progress upload keeps processing and its state is
+preserved when the user navigates away and back — the Upload page is just a
+view onto the shared queue (`useUploadQueue()`).
+`src/components/UploadIndicator.jsx` is a fixed bottom-right card shown on every
+page except `/upload` while uploads are active ("Processing N drawings…"),
+click to return to the full list. This answers "can I see uploads while on
+another page?" — yes.
+
 ## How it works
 - **Layout**: standard left-aligned `PageHeader` on top (consistent with other
   pages), then a large near-square dropzone (`mih={340}`, `maw=560`) centered in
