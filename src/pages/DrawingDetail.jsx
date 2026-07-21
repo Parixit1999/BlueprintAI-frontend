@@ -24,6 +24,7 @@ import {
   updateDrawing,
 } from '../api'
 import ConfirmDialog from '../components/ConfirmDialog'
+import ErrorState from '../components/ErrorState'
 import Loading from '../components/Loading'
 import PageHeader from '../components/PageHeader'
 import { StatusBadge } from '../components/Badges'
@@ -38,6 +39,7 @@ export default function DrawingDetail() {
   const [deleting, setDeleting] = useState(false)
   const [linkModal, linkModalCtl] = useDisclosure(false)
   const [linkCandidates, setLinkCandidates] = useState([])
+  const [loadError, setLoadError] = useState(null)
   const [linkTarget, setLinkTarget] = useState(null)
   const toast = useToast()
   const navigate = useNavigate()
@@ -53,8 +55,9 @@ export default function DrawingDetail() {
           drawing_date: d.drawing_date ?? '',
           version_note: d.version_note ?? '',
         })
+        setLoadError(null)
       })
-      .catch((e) => toast.error(e.message))
+      .catch((e) => (drawing ? toast.error(e.message) : setLoadError(e.message)))
   }
 
   useEffect(() => {
@@ -149,6 +152,7 @@ export default function DrawingDetail() {
     }
   }
 
+  if (drawing === null && loadError) return <ErrorState message={loadError} onRetry={refresh} />
   if (drawing === null || form === null) return <Loading label="Loading drawing…" />
 
   return (

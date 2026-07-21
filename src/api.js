@@ -1,24 +1,30 @@
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
 
+// Customer-facing copy: plain language, no server/backend jargon, always a
+// next step. Backend `detail` messages are already written for users and
+// take precedence when present.
+const CONNECTION_MESSAGE =
+  'We couldn’t connect to BlueprintAI. Please check your internet connection and try again in a moment.'
+
 const STATUS_FALLBACKS = {
-  413: 'The file is too large.',
-  422: 'The file could not be processed.',
-  500: 'Something went wrong on the server. Please try again.',
-  503: 'A required service is temporarily unavailable. Please try again shortly.',
+  413: 'This file is too large to upload.',
+  422: 'We couldn’t process that file. Please check it and try again.',
+  500: 'Something went wrong on our side. Please try again in a moment.',
+  503: 'BlueprintAI is briefly unavailable. Please try again shortly.',
 }
+
+const GENERIC_MESSAGE = 'Something didn’t work as expected. Please try again.'
 
 async function request(path, options = {}) {
   let res
   try {
     res = await fetch(`${API_BASE}${path}`, options)
   } catch {
-    throw new Error('Cannot reach the BlueprintAI server. Is the backend running?')
+    throw new Error(CONNECTION_MESSAGE)
   }
   if (!res.ok) {
     const body = await res.json().catch(() => null)
-    throw new Error(
-      body?.detail ?? STATUS_FALLBACKS[res.status] ?? `Request failed (HTTP ${res.status})`,
-    )
+    throw new Error(body?.detail ?? STATUS_FALLBACKS[res.status] ?? GENERIC_MESSAGE)
   }
   if (res.status === 204) return null
   return res.json()
@@ -57,11 +63,11 @@ export function uploadFile(file, filename, onProgress, folderId = null) {
         detail = null
       }
       reject(
-        new Error(detail ?? STATUS_FALLBACKS[xhr.status] ?? `Request failed (HTTP ${xhr.status})`),
+        new Error(detail ?? STATUS_FALLBACKS[xhr.status] ?? GENERIC_MESSAGE),
       )
     }
     xhr.onerror = () =>
-      reject(new Error('Cannot reach the BlueprintAI server. Is the backend running?'))
+      reject(new Error(CONNECTION_MESSAGE))
 
     xhr.send(form)
   })
@@ -197,14 +203,19 @@ export function sendChatMessage(sessionId, question, projectId = null) {
 // meta (user message + evidence, before generation), token ({t}), done
 // (stored assistant message), error ({detail}).
 export async function streamChatMessage(sessionId, question, projectId, handlers) {
-  const res = await fetch(`${API_BASE}/chats/${sessionId}/messages/stream`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question, project_id: projectId }),
-  })
+  let res
+  try {
+    res = await fetch(`${API_BASE}/chats/${sessionId}/messages/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, project_id: projectId }),
+    })
+  } catch {
+    throw new Error(CONNECTION_MESSAGE)
+  }
   if (!res.ok || !res.body) {
     const body = await res.json().catch(() => null)
-    throw new Error(body?.detail || STATUS_FALLBACKS[res.status] || 'Request failed')
+    throw new Error(body?.detail || STATUS_FALLBACKS[res.status] || GENERIC_MESSAGE)
   }
   const reader = res.body.getReader()
   const decoder = new TextDecoder()

@@ -7,6 +7,7 @@ import AssignModal from '../components/AssignModal'
 import { StatusBadge } from '../components/Badges'
 import CompareModal from '../components/CompareModal'
 import ConfirmDialog from '../components/ConfirmDialog'
+import ErrorState from '../components/ErrorState'
 import Loading from '../components/Loading'
 import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
@@ -20,6 +21,7 @@ const STATUS_OPTIONS = [
 
 export default function Documents() {
   const [files, setFiles] = useState(null)
+  const [loadError, setLoadError] = useState(null)
   // Filters live in the URL so they survive navigating to a document and back
   const [searchParams, setSearchParams] = useSearchParams()
   const query = searchParams.get('q') ?? ''
@@ -63,8 +65,11 @@ export default function Documents() {
 
   function refresh() {
     return listFiles()
-      .then(setFiles)
-      .catch((e) => toast.error(e.message))
+      .then((f) => {
+        setFiles(f)
+        setLoadError(null)
+      })
+      .catch((e) => (files ? toast.error(e.message) : setLoadError(e.message)))
   }
 
   useEffect(() => {
@@ -139,7 +144,9 @@ export default function Documents() {
         </div>
       )}
 
-      {files === null ? (
+      {files === null && loadError ? (
+        <ErrorState message={loadError} onRetry={refresh} />
+      ) : files === null ? (
         <Loading label="Loading documents…" />
       ) : files.length === 0 ? (
         <div className="empty-state">

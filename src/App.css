@@ -754,6 +754,22 @@ tbody tr.no-hover:hover {
   background: rgba(208, 59, 59, 0.1);
 }
 
+/* drawing preview failure: friendly headline + muted reason */
+.viewer-error {
+  padding: 20px 16px;
+  text-align: center;
+}
+
+.viewer-error .error {
+  color: var(--critical-text);
+  font-weight: 550;
+}
+
+.viewer-error .muted {
+  font-size: 12.5px;
+  margin-top: 4px;
+}
+
 .error-match {
   margin-top: 2px;
   font-size: 12px;

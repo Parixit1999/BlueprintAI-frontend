@@ -4,12 +4,14 @@ import { IconFolderPlus } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createProject, listProjects } from '../api'
+import ErrorState from '../components/ErrorState'
 import Loading from '../components/Loading'
 import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 
 export default function Projects() {
   const [projects, setProjects] = useState(null)
+  const [loadError, setLoadError] = useState(null)
   const [opened, { open, close }] = useDisclosure(false)
   const [name, setName] = useState('')
   const [number, setNumber] = useState('')
@@ -20,8 +22,11 @@ export default function Projects() {
 
   function refresh() {
     return listProjects()
-      .then(setProjects)
-      .catch((e) => toast.error(e.message))
+      .then((p) => {
+        setProjects(p)
+        setLoadError(null)
+      })
+      .catch((e) => (projects ? toast.error(e.message) : setLoadError(e.message)))
   }
 
   useEffect(() => {
@@ -64,7 +69,9 @@ export default function Projects() {
         }
       />
 
-      {projects === null ? (
+      {projects === null && loadError ? (
+        <ErrorState message={loadError} onRetry={refresh} />
+      ) : projects === null ? (
         <Loading label="Loading projects…" />
       ) : projects.length === 0 ? (
         <div className="empty-state">

@@ -39,6 +39,7 @@ import {
 } from '../api'
 import { StatusBadge } from '../components/Badges'
 import ConfirmDialog from '../components/ConfirmDialog'
+import ErrorState from '../components/ErrorState'
 import Loading from '../components/Loading'
 import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
@@ -47,6 +48,7 @@ export default function Files() {
   const [searchParams, setSearchParams] = useSearchParams()
   const folderId = searchParams.get('folder')
   const [data, setData] = useState(null)
+  const [loadError, setLoadError] = useState(null)
   const [allFolders, setAllFolders] = useState([])
   const [newFolderOpen, newFolderCtl] = useDisclosure(false)
   const [newFolderName, setNewFolderName] = useState('')
@@ -65,8 +67,9 @@ export default function Files() {
       .then(([b, all]) => {
         setData(b)
         setAllFolders(all)
+        setLoadError(null)
       })
-      .catch((e) => toast.error(e.message))
+      .catch((e) => (data ? toast.error(e.message) : setLoadError(e.message)))
   }
 
   useEffect(() => {
@@ -203,6 +206,7 @@ export default function Files() {
     }
   }
 
+  if (data === null && loadError) return <ErrorState message={loadError} onRetry={refresh} />
   if (data === null) return <Loading label="Loading files…" />
 
   const crumbs = [

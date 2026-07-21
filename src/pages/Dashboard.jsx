@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getStats } from '../api'
 import Loading from '../components/Loading'
+import ErrorState from '../components/ErrorState'
 import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 
@@ -98,18 +99,23 @@ function ProjectBars({ rows }) {
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null)
+  const [loadError, setLoadError] = useState(null)
   const toast = useToast()
 
   function refresh() {
     return getStats()
-      .then(setStats)
-      .catch((e) => toast.error(e.message))
+      .then((s) => {
+        setStats(s)
+        setLoadError(null)
+      })
+      .catch((e) => (stats ? toast.error(e.message) : setLoadError(e.message)))
   }
 
   useEffect(() => {
     refresh()
   }, [])
 
+  if (!stats && loadError) return <ErrorState message={loadError} onRetry={refresh} />
   if (!stats) return <Loading label="Loading statistics…" />
 
   const pendingReview = stats.documents_by_status.extracted ?? 0
