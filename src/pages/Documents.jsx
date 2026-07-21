@@ -228,13 +228,24 @@ export default function Documents() {
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       {f.drawing_id ? (
-                        <Button
-                          variant="light"
-                          size="compact-xs"
-                          onClick={() => navigate(`/drawings/${f.drawing_id}`)}
-                        >
-                          {f.dwg_number ?? 'Drawing'}
-                        </Button>
+                        <>
+                          <Button
+                            variant="light"
+                            size="compact-xs"
+                            onClick={() => navigate(`/drawings/${f.drawing_id}`)}
+                          >
+                            {f.dwg_number ?? 'Drawing'}
+                          </Button>
+                          {f.auto_assigned && (
+                            <span
+                              className="dup-tag"
+                              style={{ marginLeft: 6 }}
+                              title="Assigned automatically from an exact drawing-number match"
+                            >
+                              auto
+                            </span>
+                          )}
+                        </>
                       ) : (
                         <span className="muted">—</span>
                       )}
