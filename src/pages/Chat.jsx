@@ -87,9 +87,20 @@ function dedupeEvidence(evidence) {
   return out
 }
 
+// Distinct drawings/records the answer drew from, for the combined-sources line
+function sourceLabels(sources) {
+  const labels = []
+  for (const s of sources) {
+    const label = s.region_type === 'registry' ? s.label : (s.dwg_number ?? s.filename)
+    if (label && !labels.includes(label)) labels.push(label)
+  }
+  return labels
+}
+
 function AssistantMessage({ content, evidence, versionContext, onOpenSource }) {
   const [open, setOpen] = useState(false)
   const sources = dedupeEvidence(evidence)
+  const combined = sourceLabels(sources)
   return (
     <div className="msg msg-assistant">
       <div className="assistant-avatar">B</div>
@@ -97,6 +108,11 @@ function AssistantMessage({ content, evidence, versionContext, onOpenSource }) {
         <div className="msg-bubble">
           <p>{content}</p>
         </div>
+        {combined.length > 1 && (
+          <div className="version-context">
+            Combined from {combined.length} sources: {combined.join(' · ')}
+          </div>
+        )}
         {versionContext && (
           <div className="version-context">
             Answer based on version <Badge variant="light" size="sm">{versionContext.used.label}</Badge>
