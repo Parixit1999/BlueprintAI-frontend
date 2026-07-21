@@ -1013,6 +1013,30 @@ tbody tr.no-hover:hover {
   font-weight: 600;
 }
 
+/* status phrase while an answer streams ("Searching your drawings…") */
+.status-phrase {
+  color: var(--ink-secondary, #666);
+  font-size: 13.5px;
+  margin-right: 4px;
+}
+
+/* blinking caret at the end of streaming answer text */
+.stream-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--accent);
+  animation: cursor-blink 0.9s steps(1) infinite;
+}
+
+@keyframes cursor-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
 .msg-bubble.thinking {
   display: flex;
   gap: 5px;

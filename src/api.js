@@ -193,6 +193,41 @@ export function sendChatMessage(sessionId, question, projectId = null) {
   })
 }
 
+// SSE over fetch (POST bodies rule out EventSource). Emits handler callbacks:
+// meta (user message + evidence, before generation), token ({t}), done
+// (stored assistant message), error ({detail}).
+export async function streamChatMessage(sessionId, question, projectId, handlers) {
+  const res = await fetch(`${API_BASE}/chats/${sessionId}/messages/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question, project_id: projectId }),
+  })
+  if (!res.ok || !res.body) {
+    const body = await res.json().catch(() => null)
+    throw new Error(body?.detail || STATUS_FALLBACKS[res.status] || 'Request failed')
+  }
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    let sep
+    while ((sep = buffer.indexOf('\n\n')) !== -1) {
+      const frame = buffer.slice(0, sep)
+      buffer = buffer.slice(sep + 2)
+      let event = 'message'
+      let data = null
+      for (const line of frame.split('\n')) {
+        if (line.startsWith('event: ')) event = line.slice(7).trim()
+        else if (line.startsWith('data: ')) data = JSON.parse(line.slice(6))
+      }
+      handlers[event]?.(data)
+    }
+  }
+}
+
 export function renameChatSession(sessionId, title) {
   return request(`/chats/${sessionId}`, {
     method: 'PATCH',
