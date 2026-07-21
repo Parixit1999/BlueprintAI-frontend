@@ -119,7 +119,7 @@ export default function Documents() {
       ) : files.length === 0 ? (
         <div className="empty-state">
           <p>No documents yet.</p>
-          <p className="page-sub">Upload a DXF, vector PDF, or drawing photo to get started.</p>
+          <p className="page-sub">Upload a DXF, PDF, or drawing photo to get started.</p>
         </div>
       ) : (
         <>

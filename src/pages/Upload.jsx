@@ -131,7 +131,7 @@ export default function Upload() {
     <Box>
       <PageHeader
         title="Upload drawings"
-        description="Add CAD (.dxf), vector PDFs, or drawing images. Drop many files at once, or a .zip archive of drawings for bulk import."
+        description="Add CAD (.dxf), PDFs (vector or scanned), or drawing images. Drop many files at once, or a .zip archive of drawings for bulk import."
       />
 
       <Dropzone
