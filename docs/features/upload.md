@@ -5,9 +5,15 @@ multi-file, ZIP archives, and a live progress queue.
 
 ## How it works
 - **Layout**: standard left-aligned `PageHeader` on top (consistent with other
-  pages), then a large near-square dropzone (`mih={340}`, `maw=880` page width).
-- **Dropzone**: Mantine `@mantine/dropzone` accepts `.dxf/.pdf/.png/.jpg/.jpeg`
-  and `.zip`, multiple files.
+  pages), then a large near-square dropzone (`mih={340}`, `maw=560`) centered in
+  the content area.
+- **Dropzone**: Mantine `@mantine/dropzone`, multiple files. Deliberately has
+  **no `accept` filter** — DXF has no reliable MIME type (browsers report an
+  empty string), and mixing bare MIME types with extensions makes the native
+  macOS file dialog grey out every file. Instead the native picker allows any
+  file and we validate the extension against `SUPPORTED` in `handleDrop`:
+  unsupported files are marked "Unsupported" and never uploaded; supported ones
+  are queued, and the backend still rejects bad content with a clear error.
 - **ZIP expansion is client-side** via `jszip`: a dropped `.zip` is read in the
   browser, each supported entry is extracted to a Blob and queued; unsupported
   entries (and `__MACOSX`/dotfiles) are marked "Unsupported" and skipped. No

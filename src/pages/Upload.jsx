@@ -30,7 +30,6 @@ import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 
 const SUPPORTED = ['dxf', 'pdf', 'png', 'jpg', 'jpeg']
-const ACCEPT = ['.dxf', '.pdf', '.png', '.jpg', '.jpeg', '.zip', 'application/zip']
 
 let uid = 0
 const ext = (name) => name.split('.').pop().toLowerCase()
@@ -108,7 +107,13 @@ export default function Upload() {
           toast.error(`Could not read ${file.name} as a zip archive.`)
         }
       } else {
-        additions.push({ id: ++uid, name: file.name, file, status: 'queued' })
+        const supported = SUPPORTED.includes(ext(file.name))
+        additions.push({
+          id: ++uid,
+          name: file.name,
+          file,
+          status: supported ? 'queued' : 'skipped',
+        })
       }
     }
     setExpanding(false)
@@ -131,14 +136,16 @@ export default function Upload() {
 
       <Dropzone
         onDrop={handleDrop}
-        accept={ACCEPT}
         loading={expanding}
         multiple
         radius="lg"
         p="xl"
         maw={560}
         mx="auto"
-      >
+      >{/* No `accept` filter: DXF has no reliable MIME type, and mixing bare
+          MIME types with extensions makes the native file dialog grey out every
+          file. We validate the extension in handleDrop and the backend rejects
+          anything unsupported with a clear error. */}
         <Stack justify="center" align="center" gap="md" mih={340} style={{ pointerEvents: 'none' }}>
           <Dropzone.Accept>
             <ThemeIcon size={72} radius="lg" variant="light" color="brand">
