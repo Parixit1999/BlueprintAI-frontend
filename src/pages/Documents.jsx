@@ -25,6 +25,7 @@ export default function Documents() {
   const query = searchParams.get('q') ?? ''
   const typeFilter = searchParams.get('type') ?? 'all'
   const statusFilter = searchParams.get('status') ?? 'all'
+  const assignedFilter = searchParams.get('assigned') ?? 'all'
   const dupOnly = searchParams.get('dup') === '1'
   const [pendingDelete, setPendingDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
@@ -82,10 +83,12 @@ export default function Documents() {
       if (query && !f.filename.toLowerCase().includes(query.toLowerCase())) return false
       if (typeFilter !== 'all' && f.file_type !== typeFilter) return false
       if (statusFilter !== 'all' && f.status !== statusFilter) return false
+      if (assignedFilter === 'yes' && !f.drawing_id) return false
+      if (assignedFilter === 'no' && f.drawing_id) return false
       if (dupOnly && !f.is_duplicate) return false
       return true
     })
-  }, [files, query, typeFilter, statusFilter, dupOnly])
+  }, [files, query, typeFilter, statusFilter, assignedFilter, dupOnly])
 
   async function confirmDelete() {
     setDeleting(true)
@@ -164,6 +167,11 @@ export default function Documents() {
                 </option>
               ))}
             </select>
+            <select value={assignedFilter} onChange={(e) => setFilter('assigned', e.target.value)}>
+              <option value="all">All assignments</option>
+              <option value="yes">Assigned</option>
+              <option value="no">Unassigned</option>
+            </select>
             <label className="dup-toggle">
               <input type="checkbox" checked={dupOnly} onChange={(e) => setFilter('dup', e.target.checked)} />
               Duplicates only
@@ -178,10 +186,11 @@ export default function Documents() {
               <thead>
                 <tr>
                   <th>Name</th>
+                  <th>Assignment</th>
                   <th>Type</th>
                   <th>Status</th>
                   <th>Uploaded</th>
-                  <th />
+                  <th className="th-actions">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -213,65 +222,84 @@ export default function Documents() {
                       {f.status === 'failed' && f.error && (
                         <div className="error-match">{f.error}</div>
                       )}
-                      {f.dwg_number && (
-                        <div className="dup-match">
-                          DWG {f.dwg_number}
-                        </div>
+                    </td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      {f.drawing_id ? (
+                        <Button
+                          variant="light"
+                          size="compact-xs"
+                          onClick={() => navigate(`/drawings/${f.drawing_id}`)}
+                        >
+                          {f.dwg_number ?? 'Drawing'}
+                        </Button>
+                      ) : (
+                        <span className="muted">—</span>
                       )}
                     </td>
                     <td className="cell-type">{f.file_type.toUpperCase()}</td>
                     <td>
                       <StatusBadge status={f.status} />
                     </td>
-                    <td className="cell-date">{new Date(f.created_at).toLocaleString()}</td>
+                    <td className="cell-date" title={new Date(f.created_at).toLocaleString()}>
+                      {new Date(f.created_at).toLocaleDateString()}
+                    </td>
                     <td className="cell-action" onClick={(e) => e.stopPropagation()}>
-                      <div>
-                        {!f.drawing_id && f.status !== 'failed' && (
+                      {/* Fixed slots so actions line up in columns across rows */}
+                      <div className="action-grid">
+                        <span>
+                          {!f.drawing_id && f.status !== 'failed' && (
+                            <Button
+                              variant="subtle"
+                              color="grape"
+                              size="compact-xs"
+                              onClick={() => setAssigning(f)}
+                            >
+                              Assign
+                            </Button>
+                          )}
+                        </span>
+                        <span>
+                          {f.is_duplicate && (
+                            <Button
+                              variant="subtle"
+                              color="orange"
+                              size="compact-xs"
+                              onClick={() => setComparing(f)}
+                            >
+                              Compare
+                            </Button>
+                          )}
+                        </span>
+                        <span>
+                          {f.status === 'failed' ? (
+                            <Button
+                              variant="subtle"
+                              size="compact-xs"
+                              loading={retryingId === f.file_id}
+                              onClick={() => handleRetry(f)}
+                            >
+                              Retry
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="subtle"
+                              size="compact-xs"
+                              onClick={() => navigate(`/documents/${f.file_id}`)}
+                            >
+                              {f.status === 'extracted' ? 'Review' : 'View'}
+                            </Button>
+                          )}
+                        </span>
+                        <span>
                           <Button
                             variant="subtle"
-                            color="grape"
-                            size="compact-sm"
-                            onClick={() => setAssigning(f)}
+                            color="red"
+                            size="compact-xs"
+                            onClick={() => setPendingDelete(f)}
                           >
-                            Assign
+                            Delete
                           </Button>
-                        )}
-                        {f.is_duplicate && (
-                          <Button
-                            variant="subtle"
-                            color="orange"
-                            size="compact-sm"
-                            onClick={() => setComparing(f)}
-                          >
-                            Compare
-                          </Button>
-                        )}
-                        {f.status === 'failed' ? (
-                          <Button
-                            variant="subtle"
-                            size="compact-sm"
-                            loading={retryingId === f.file_id}
-                            onClick={() => handleRetry(f)}
-                          >
-                            Retry
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="subtle"
-                            size="compact-sm"
-                            onClick={() => navigate(`/documents/${f.file_id}`)}
-                          >
-                            {f.status === 'extracted' ? 'Review' : 'View'}
-                          </Button>
-                        )}
-                        <Button
-                          variant="subtle"
-                          color="red"
-                          size="compact-sm"
-                          onClick={() => setPendingDelete(f)}
-                        >
-                          Delete
-                        </Button>
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -279,7 +307,7 @@ export default function Documents() {
                 })}
                 {filtered.length === 0 && (
                   <tr className="no-hover">
-                    <td colSpan={5} className="empty-note center">
+                    <td colSpan={6} className="empty-note center">
                       No documents match these filters.
                     </td>
                   </tr>
