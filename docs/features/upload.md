@@ -19,16 +19,31 @@ multi-file, ZIP archives, and a live progress queue.
   entries (and `__MACOSX`/dotfiles) are marked "Unsupported" and skipped. No
   backend zip endpoint — each extracted file is uploaded through the normal
   `POST /files/upload`.
-- **Queue**: items carry `{id, name, file, status, error?, fileId?, regions?}`.
-  Statuses: queued → uploading → done | error | skipped.
+- **Queue**: items carry `{id, name, file, status, percent?, error?, fileId?, regions?}`.
+  Statuses: queued → **uploading** → **processing** → done | error | skipped.
+- **Two visible phases** (the upload is one blocking `POST /files/upload` that
+  both receives the file and runs extraction):
+  - `uploading` — real byte progress from `XMLHttpRequest.upload.onprogress`,
+    shown as "Uploading… N%" with a live `Progress` bar. Instant for small local
+    files; visible for large ones.
+  - `processing` — once bytes are sent, the server is extracting. Shown with a
+    spinner, an animated `Progress` bar, and a type-specific hint
+    (`PROCESSING_HINT`): DXF → parsing geometry, PDF → text/vision, image →
+    vision. This is where scanned-PDF/image vision time is spent.
 - **Processing is sequential** (`runningRef` guard) so the local Ollama vision
   model isn't hit by many images at once.
 - **Progress UI**: overall `Progress` bar + "N of M done · K failed", per-file
-  rows with a status `ThemeIcon`, `Badge`, and the backend's error message on
-  failure; done rows link to `/documents/:fileId` (Review).
+  rows with a status `ThemeIcon`, `Badge`, per-phase text/bar, and the backend's
+  error message on failure; done rows link to `/documents/:fileId` (Review).
+- **Loaders**: `src/components/Loading.jsx` (centered Mantine `Loader` + optional
+  label) replaces the old "Loading…" text on Documents, Dashboard, and the
+  DrawingViewer.
 
 ## API
-- `uploadFile(file, filename)` in `api.js` — the optional `filename` is required
+- `uploadFile(file, filename, onProgress)` in `api.js` — uses `XMLHttpRequest`
+  (not `fetch`) so it can report progress: `onProgress` gets
+  `{ phase: 'uploading', percent }` during byte transfer, then
+  `{ phase: 'processing' }` once fully sent. The optional `filename` is required
   when uploading a Blob extracted from a zip (FormData needs the name so the
   backend infers the extension). Real `File`s carry their own name.
 

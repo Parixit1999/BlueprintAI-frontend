@@ -24,11 +24,46 @@ async function request(path, options = {}) {
   return res.json()
 }
 
-export function uploadFile(file, filename) {
-  const form = new FormData()
-  if (filename) form.append('file', file, filename)
-  else form.append('file', file)
-  return request('/files/upload', { method: 'POST', body: form })
+// Uploaded via XHR (not fetch) so we can report real progress. onProgress gets
+// { phase: 'uploading', percent } while bytes transfer, then { phase: 'processing' }
+// once the request is fully sent and the server is extracting (vision/LLM/parse).
+export function uploadFile(file, filename, onProgress) {
+  return new Promise((resolve, reject) => {
+    const form = new FormData()
+    if (filename) form.append('file', file, filename)
+    else form.append('file', file)
+
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `${API_BASE}/files/upload`)
+
+    xhr.upload.onprogress = (e) => {
+      if (!e.lengthComputable || !onProgress) return
+      const percent = Math.round((e.loaded / e.total) * 100)
+      onProgress(percent >= 100 ? { phase: 'processing' } : { phase: 'uploading', percent })
+    }
+    // Bytes fully sent; the server is now extracting.
+    xhr.upload.onload = () => onProgress?.({ phase: 'processing' })
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(xhr.responseText ? JSON.parse(xhr.responseText) : null)
+        return
+      }
+      let detail
+      try {
+        detail = JSON.parse(xhr.responseText)?.detail
+      } catch {
+        detail = null
+      }
+      reject(
+        new Error(detail ?? STATUS_FALLBACKS[xhr.status] ?? `Request failed (HTTP ${xhr.status})`),
+      )
+    }
+    xhr.onerror = () =>
+      reject(new Error('Cannot reach the BlueprintAI server. Is the backend running?'))
+
+    xhr.send(form)
+  })
 }
 
 export function listFiles() {

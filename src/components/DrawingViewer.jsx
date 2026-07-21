@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getRender } from '../api'
+import Loading from './Loading'
 
 const renderCache = new Map()
 
@@ -30,7 +31,7 @@ export default function DrawingViewer({ fileId, highlightBbox, page = 1 }) {
   }, [fileId, page, cacheKey])
 
   if (error) return <p className="error">Drawing preview unavailable: {error}</p>
-  if (!render) return <p className="placeholder">Loading drawing…</p>
+  if (!render) return <Loading label="Rendering drawing…" py="lg" size="sm" />
 
   const [xmin, ymin, xmax, ymax] = render.extents
   let highlight = null

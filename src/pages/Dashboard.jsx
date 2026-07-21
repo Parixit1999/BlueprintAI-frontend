@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getStats } from '../api'
+import Loading from '../components/Loading'
 import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 
@@ -61,7 +62,7 @@ export default function Dashboard() {
       .catch((e) => toast.error(e.message))
   }, [])
 
-  if (!stats) return <p className="empty-note">Loading statistics…</p>
+  if (!stats) return <Loading label="Loading statistics…" />
 
   const pendingReview = stats.documents_by_status.extracted ?? 0
   const typeParts = Object.entries(stats.documents_by_type).map(([type, value], i) => ({

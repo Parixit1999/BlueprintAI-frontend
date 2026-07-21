@@ -6,6 +6,7 @@ import { deleteFile, listFiles } from '../api'
 import { StatusBadge } from '../components/Badges'
 import CompareModal from '../components/CompareModal'
 import ConfirmDialog from '../components/ConfirmDialog'
+import Loading from '../components/Loading'
 import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 
@@ -115,7 +116,7 @@ export default function Documents() {
       )}
 
       {files === null ? (
-        <p className="empty-note">Loading…</p>
+        <Loading label="Loading documents…" />
       ) : files.length === 0 ? (
         <div className="empty-state">
           <p>No documents yet.</p>

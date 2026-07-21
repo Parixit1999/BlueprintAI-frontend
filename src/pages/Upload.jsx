@@ -37,11 +37,23 @@ const basename = (path) => path.split('/').pop()
 
 const STATUS = {
   queued: { label: 'Queued', color: 'gray' },
-  uploading: { label: 'Processing', color: 'blue' },
+  uploading: { label: 'Uploading', color: 'blue' },
+  processing: { label: 'Processing', color: 'violet' },
   done: { label: 'Done', color: 'teal' },
   error: { label: 'Failed', color: 'red' },
   skipped: { label: 'Unsupported', color: 'gray' },
 }
+
+// What the backend is doing during the "processing" phase, by file type.
+const PROCESSING_HINT = {
+  dxf: 'Parsing CAD geometry and extracting regions…',
+  pdf: 'Extracting text — scanned pages are read with the vision model…',
+  png: 'Analyzing the drawing with the vision model…',
+  jpg: 'Analyzing the drawing with the vision model…',
+  jpeg: 'Analyzing the drawing with the vision model…',
+}
+const processingHint = (name) =>
+  PROCESSING_HINT[ext(name)] ?? 'Reading the drawing and extracting regions…'
 
 export default function Upload() {
   const [items, setItems] = useState([])
@@ -53,7 +65,9 @@ export default function Upload() {
   const total = items.length
   const done = items.filter((i) => i.status === 'done').length
   const failed = items.filter((i) => i.status === 'error').length
-  const active = items.some((i) => i.status === 'uploading' || i.status === 'queued')
+  const active = items.some((i) =>
+    ['queued', 'uploading', 'processing'].includes(i.status),
+  )
 
   function patch(id, changes) {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...changes } : i)))
@@ -71,9 +85,12 @@ export default function Upload() {
         }),
       )
       if (!next) break
-      patch(next.id, { status: 'uploading' })
+      patch(next.id, { status: 'uploading', percent: 0 })
       try {
-        const res = await uploadFile(next.file, next.name)
+        const res = await uploadFile(next.file, next.name, (p) => {
+          if (p.phase === 'uploading') patch(next.id, { status: 'uploading', percent: p.percent })
+          else patch(next.id, { status: 'processing' })
+        })
         patch(next.id, { status: 'done', fileId: res.file_id, regions: res.chunks.length })
       } catch (e) {
         patch(next.id, { status: 'error', error: e.message })
@@ -124,7 +141,9 @@ export default function Upload() {
   }
 
   function clearFinished() {
-    setItems((prev) => prev.filter((i) => i.status === 'uploading' || i.status === 'queued'))
+    setItems((prev) =>
+      prev.filter((i) => ['queued', 'uploading', 'processing'].includes(i.status)),
+    )
   }
 
   return (
@@ -212,13 +231,13 @@ export default function Upload() {
                   py={8}
                   style={{ border: '1px solid var(--mantine-color-gray-2)', borderRadius: 8 }}
                 >
-                  <Group gap="sm" wrap="nowrap" align="flex-start" style={{ minWidth: 0 }}>
+                  <Group gap="sm" wrap="nowrap" align="flex-start" style={{ minWidth: 0, flex: 1 }}>
                     <ThemeIcon variant="light" color={s.color} size="md" radius="md">
                       {item.status === 'done' ? (
                         <IconCheck size={16} />
                       ) : item.status === 'error' ? (
                         <IconExclamationCircle size={16} />
-                      ) : item.status === 'uploading' ? (
+                      ) : item.status === 'uploading' || item.status === 'processing' ? (
                         <Loader size={14} color={s.color} />
                       ) : item.source ? (
                         <IconFileZip size={16} />
@@ -226,7 +245,7 @@ export default function Upload() {
                         <IconFile size={16} />
                       )}
                     </ThemeIcon>
-                    <div style={{ minWidth: 0 }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
                       <Text size="sm" fw={500} truncate>
                         {item.name}
                       </Text>
@@ -234,6 +253,20 @@ export default function Upload() {
                         <Text size="xs" c="red.7" style={{ lineHeight: 1.4 }}>
                           {item.error}
                         </Text>
+                      ) : item.status === 'uploading' ? (
+                        <>
+                          <Text size="xs" c="dimmed">
+                            Uploading… {item.percent ?? 0}%
+                          </Text>
+                          <Progress value={item.percent ?? 0} color="blue" size="xs" radius="xl" mt={4} />
+                        </>
+                      ) : item.status === 'processing' ? (
+                        <>
+                          <Text size="xs" c="dimmed" style={{ lineHeight: 1.4 }}>
+                            {processingHint(item.name)}
+                          </Text>
+                          <Progress value={100} color="violet" size="xs" radius="xl" mt={4} animated />
+                        </>
                       ) : (
                         <Text size="xs" c="dimmed" truncate>
                           {item.status === 'done'
