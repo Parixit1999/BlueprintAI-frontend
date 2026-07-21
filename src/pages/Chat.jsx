@@ -1,4 +1,4 @@
-import { ActionIcon, Button, TextInput } from '@mantine/core'
+import { ActionIcon, Badge, Button, Select, TextInput } from '@mantine/core'
 import { IconPencil, IconPlus, IconSend, IconTrash } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import {
@@ -6,6 +6,7 @@ import {
   deleteChatSession,
   getChatMessages,
   listChatSessions,
+  listProjects,
   renameChatSession,
   sendChatMessage,
 } from '../api'
@@ -107,7 +108,9 @@ function AssistantMessage({ content, evidence, onOpenSource }) {
                   <li key={i}>
                     <button className="source-row" onClick={() => onOpenSource(s)}>
                       <span className="source-index">{i + 1}</span>
-                      <span className="source-region">{s.region_type.replace('_', ' ')}</span>
+                      <span className="source-region">
+                        {s.dwg_number ?? s.region_type.replace('_', ' ')}
+                      </span>
                       <span className="source-text">{s.chunk_text ?? '(unreadable)'}</span>
                       <span className="source-view">View on drawing →</span>
                     </button>
@@ -129,6 +132,8 @@ export default function Chat() {
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [sourceOpen, setSourceOpen] = useState(null)
+  const [projects, setProjects] = useState([])
+  const [projectScope, setProjectScope] = useState(null) // null = all projects
   const [renamingId, setRenamingId] = useState(null)
   const [pendingDelete, setPendingDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
@@ -142,6 +147,8 @@ export default function Chat() {
         if (s.length > 0) openSession(s[0].session_id)
       })
       .catch((e) => toast.error(e.message))
+    // scope selector options; chat still works if this fails
+    listProjects().then(setProjects).catch(() => {})
   }, [])
 
   function refreshChats() {
@@ -236,7 +243,7 @@ export default function Chat() {
     setBusy(true)
     setMessages((m) => [...m, { message_id: 'pending-user', role: 'user', content: question }])
     try {
-      const res = await sendChatMessage(sessionId, question)
+      const res = await sendChatMessage(sessionId, question, projectScope)
       setMessages((m) => [
         ...m.filter((x) => x.message_id !== 'pending-user'),
         res.user_message,
@@ -265,6 +272,21 @@ export default function Chat() {
         <Button fullWidth leftSection={<IconPlus size={16} />} onClick={newSession}>
           New chat
         </Button>
+        <Select
+          size="xs"
+          mt="xs"
+          label="Search scope"
+          data={[
+            { value: 'all', label: 'All projects' },
+            ...projects.map((p) => ({
+              value: p.project_id,
+              label: p.number ? `${p.name} (#${p.number})` : p.name,
+            })),
+          ]}
+          value={projectScope ?? 'all'}
+          onChange={(v) => setProjectScope(v === 'all' ? null : v)}
+          searchable
+        />
         <div className="session-list">
           {sessions.map((s) => (
             <SessionRow
@@ -348,6 +370,16 @@ export default function Chat() {
               <span className="region">{sourceOpen.region_type.replace('_', ' ')}</span>
               “{sourceOpen.chunk_text}”
             </p>
+            {(sourceOpen.dwg_number || sourceOpen.project_name || sourceOpen.filename) && (
+              <p className="evidence-score muted">
+                {sourceOpen.dwg_number && (
+                  <Badge variant="light" size="sm" mr={6}>
+                    {sourceOpen.dwg_number}
+                  </Badge>
+                )}
+                {[sourceOpen.filename, sourceOpen.project_name].filter(Boolean).join(' · ')}
+              </p>
+            )}
             <p className="evidence-score muted">Relevance score {sourceOpen.score}</p>
             <DrawingViewer
               fileId={sourceOpen.source_file_id}

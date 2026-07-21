@@ -184,11 +184,11 @@ export function getChatMessages(sessionId) {
   return request(`/chats/${sessionId}`)
 }
 
-export function sendChatMessage(sessionId, question) {
+export function sendChatMessage(sessionId, question, projectId = null) {
   return request(`/chats/${sessionId}/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({ question, project_id: projectId }),
   })
 }
 
