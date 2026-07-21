@@ -3,6 +3,7 @@ import { IconUpload } from '@tabler/icons-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { deleteFile, listFiles, retryExtraction } from '../api'
+import AssignModal from '../components/AssignModal'
 import { StatusBadge } from '../components/Badges'
 import CompareModal from '../components/CompareModal'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -28,6 +29,7 @@ export default function Documents() {
   const [pendingDelete, setPendingDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const [comparing, setComparing] = useState(null)
+  const [assigning, setAssigning] = useState(null)
   const [retryingId, setRetryingId] = useState(null)
   const toast = useToast()
   const navigate = useNavigate()
@@ -211,6 +213,11 @@ export default function Documents() {
                       {f.status === 'failed' && f.error && (
                         <div className="error-match">{f.error}</div>
                       )}
+                      {f.dwg_number && (
+                        <div className="dup-match">
+                          DWG {f.dwg_number}
+                        </div>
+                      )}
                     </td>
                     <td className="cell-type">{f.file_type.toUpperCase()}</td>
                     <td>
@@ -219,6 +226,16 @@ export default function Documents() {
                     <td className="cell-date">{new Date(f.created_at).toLocaleString()}</td>
                     <td className="cell-action" onClick={(e) => e.stopPropagation()}>
                       <div>
+                        {!f.drawing_id && f.status !== 'failed' && (
+                          <Button
+                            variant="subtle"
+                            color="grape"
+                            size="compact-sm"
+                            onClick={() => setAssigning(f)}
+                          >
+                            Assign
+                          </Button>
+                        )}
                         {f.is_duplicate && (
                           <Button
                             variant="subtle"
@@ -271,6 +288,17 @@ export default function Documents() {
             </table>
           </div>
         </>
+      )}
+
+      {assigning && (
+        <AssignModal
+          file={assigning}
+          onClose={() => setAssigning(null)}
+          onAssigned={() => {
+            setAssigning(null)
+            refresh()
+          }}
+        />
       )}
 
       {comparing && (

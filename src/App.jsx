@@ -8,6 +8,9 @@ import Chat from './pages/Chat'
 import Dashboard from './pages/Dashboard'
 import DocumentDetail from './pages/DocumentDetail'
 import Documents from './pages/Documents'
+import DrawingDetail from './pages/DrawingDetail'
+import ProjectDetail from './pages/ProjectDetail'
+import Projects from './pages/Projects'
 import Upload from './pages/Upload'
 
 export default function App() {
@@ -20,6 +23,9 @@ export default function App() {
           <main className="content">
             <Routes>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/projects" element={<Projects />} />
+              <Route path="/projects/:projectId" element={<ProjectDetail />} />
+              <Route path="/drawings/:drawingId" element={<DrawingDetail />} />
               <Route path="/upload" element={<Upload />} />
               <Route path="/documents" element={<Documents />} />
               <Route path="/documents/:fileId" element={<DocumentDetail />} />

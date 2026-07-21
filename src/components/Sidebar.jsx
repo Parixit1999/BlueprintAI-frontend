@@ -1,6 +1,7 @@
 import { Burger, Drawer } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import {
+  IconFolders,
   IconLayoutDashboard,
   IconMessageCircle,
   IconFileText,
@@ -10,6 +11,7 @@ import { NavLink } from 'react-router-dom'
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: IconLayoutDashboard, end: true },
+  { to: '/projects', label: 'Projects', icon: IconFolders },
   { to: '/upload', label: 'Upload', icon: IconUpload },
   { to: '/documents', label: 'Documents', icon: IconFileText },
   { to: '/chat', label: 'Chat', icon: IconMessageCircle },

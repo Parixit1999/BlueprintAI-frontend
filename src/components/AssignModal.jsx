@@ -1,0 +1,201 @@
+import {
+  Badge,
+  Button,
+  Divider,
+  Group,
+  Modal,
+  Select,
+  Stack,
+  Text,
+} from '@mantine/core'
+import { IconFile, IconFolder, IconSparkles } from '@tabler/icons-react'
+import { useEffect, useState } from 'react'
+import { assignFile, getFileSuggestions, listProjects } from '../api'
+import Loading from './Loading'
+import { useToast } from './Toast'
+
+/**
+ * Assign an uploaded file to the registry: either attach it to an existing
+ * drawing (as a sheet/version file) or create a new drawing under a project.
+ * Suggestions come from the smart matcher (filename signals: DWG numbers,
+ * pj#### project numbers, name fragments, initials) - the user confirms.
+ */
+export default function AssignModal({ file, onClose, onAssigned }) {
+  const [suggestions, setSuggestions] = useState(null)
+  const [projects, setProjects] = useState([])
+  const [manualProject, setManualProject] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const toast = useToast()
+
+  useEffect(() => {
+    Promise.all([getFileSuggestions(file.file_id), listProjects()])
+      .then(([s, p]) => {
+        setSuggestions(s)
+        setProjects(p)
+      })
+      .catch((e) => toast.error(e.message))
+  }, [file.file_id])
+
+  async function doAssign(payload, successMessage) {
+    setBusy(true)
+    try {
+      await assignFile(file.file_id, payload)
+      toast.success(successMessage)
+      onAssigned()
+    } catch (e) {
+      toast.error(e.message)
+      setBusy(false)
+    }
+  }
+
+  const pct = (score) => `${Math.round(score * 100)}%`
+
+  return (
+    <Modal opened onClose={onClose} title={`Assign ${file.filename}`} centered size="lg">
+      {suggestions === null ? (
+        <Loading label="Analyzing file name…" py="lg" size="sm" />
+      ) : (
+        <Stack gap="md">
+          {suggestions.drawing_suggestions.length > 0 && (
+            <div>
+              <Group gap={6} mb={6}>
+                <IconSparkles size={16} color="var(--mantine-color-brand-6)" />
+                <Text size="sm" fw={600}>
+                  Matching drawings
+                </Text>
+              </Group>
+              <Stack gap={6}>
+                {suggestions.drawing_suggestions.map((s) => (
+                  <Group
+                    key={s.drawing_id}
+                    justify="space-between"
+                    wrap="nowrap"
+                    px="sm"
+                    py={8}
+                    style={{ border: '1px solid var(--mantine-color-gray-3)', borderRadius: 8 }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <Group gap="xs" wrap="nowrap">
+                        <IconFile size={15} />
+                        <Text size="sm" fw={500} truncate>
+                          {s.dwg_number}
+                          {s.project_name ? ` · ${s.project_name}` : ''}
+                        </Text>
+                        <Badge variant="light" size="sm">
+                          {pct(s.score)}
+                        </Badge>
+                      </Group>
+                      <Text size="xs" c="dimmed" truncate>
+                        {s.description ?? ''} — {s.reason}
+                      </Text>
+                    </div>
+                    <Button
+                      size="compact-sm"
+                      loading={busy}
+                      onClick={() =>
+                        doAssign(
+                          { drawing_id: s.drawing_id },
+                          `Attached to drawing ${s.dwg_number}.`,
+                        )
+                      }
+                    >
+                      Attach
+                    </Button>
+                  </Group>
+                ))}
+              </Stack>
+            </div>
+          )}
+
+          {suggestions.project_suggestions.length > 0 && (
+            <div>
+              <Group gap={6} mb={6}>
+                <IconSparkles size={16} color="var(--mantine-color-brand-6)" />
+                <Text size="sm" fw={600}>
+                  Matching projects
+                </Text>
+              </Group>
+              <Stack gap={6}>
+                {suggestions.project_suggestions.map((s) => (
+                  <Group
+                    key={s.project_id}
+                    justify="space-between"
+                    wrap="nowrap"
+                    px="sm"
+                    py={8}
+                    style={{ border: '1px solid var(--mantine-color-gray-3)', borderRadius: 8 }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <Group gap="xs" wrap="nowrap">
+                        <IconFolder size={15} />
+                        <Text size="sm" fw={500} truncate>
+                          {s.name}
+                          {s.number ? ` (#${s.number})` : ''}
+                        </Text>
+                        <Badge variant="light" size="sm">
+                          {pct(s.score)}
+                        </Badge>
+                      </Group>
+                      <Text size="xs" c="dimmed" truncate>
+                        {s.reason}
+                      </Text>
+                    </div>
+                    <Button
+                      size="compact-sm"
+                      variant="light"
+                      loading={busy}
+                      onClick={() =>
+                        doAssign(
+                          { new_drawing: { project_id: s.project_id } },
+                          `Added to ${s.name} as a new drawing.`,
+                        )
+                      }
+                    >
+                      Add here
+                    </Button>
+                  </Group>
+                ))}
+              </Stack>
+            </div>
+          )}
+
+          {suggestions.drawing_suggestions.length === 0 &&
+            suggestions.project_suggestions.length === 0 && (
+              <Text size="sm" c="dimmed">
+                No automatic match found in the file name. Pick a project below — a new
+                drawing will be created in it for this file.
+              </Text>
+            )}
+
+          <Divider label="Or assign manually" labelPosition="center" />
+          <Group wrap="nowrap" align="flex-end">
+            <Select
+              label="Project"
+              placeholder={projects.length ? 'Choose a project…' : 'No projects yet'}
+              data={projects.map((p) => ({
+                value: p.project_id,
+                label: p.number ? `${p.name} (#${p.number})` : p.name,
+              }))}
+              value={manualProject}
+              onChange={setManualProject}
+              searchable
+              style={{ flex: 1 }}
+            />
+            <Button
+              disabled={!manualProject}
+              loading={busy}
+              onClick={() =>
+                doAssign(
+                  { new_drawing: { project_id: manualProject } },
+                  'File assigned as a new drawing.',
+                )
+              }
+            >
+              Assign
+            </Button>
+          </Group>
+        </Stack>
+      )}
+    </Modal>
+  )
+}

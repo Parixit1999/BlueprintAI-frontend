@@ -94,6 +94,80 @@ export function retryExtraction(fileId) {
   return request(`/files/${fileId}/retry`, { method: 'POST' })
 }
 
+// --- Phase 1: projects / drawings / sets ---
+
+const json = (body) => ({
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+})
+
+export function listProjects() {
+  return request('/projects')
+}
+
+export function createProject(fields) {
+  return request('/projects', { method: 'POST', ...json(fields) })
+}
+
+export function getProject(projectId) {
+  return request(`/projects/${projectId}`)
+}
+
+export function updateProject(projectId, fields) {
+  return request(`/projects/${projectId}`, { method: 'PATCH', ...json(fields) })
+}
+
+export function deleteProject(projectId) {
+  return request(`/projects/${projectId}`, { method: 'DELETE' })
+}
+
+export function createSet(projectId, fields) {
+  return request(`/projects/${projectId}/sets`, { method: 'POST', ...json(fields) })
+}
+
+export function deleteSet(setId) {
+  return request(`/sets/${setId}`, { method: 'DELETE' })
+}
+
+export function createDrawing(fields) {
+  return request('/drawings', { method: 'POST', ...json(fields) })
+}
+
+export function getDrawing(drawingId) {
+  return request(`/drawings/${drawingId}`)
+}
+
+export function updateDrawing(drawingId, fields) {
+  return request(`/drawings/${drawingId}`, { method: 'PATCH', ...json(fields) })
+}
+
+export function deleteDrawing(drawingId) {
+  return request(`/drawings/${drawingId}`, { method: 'DELETE' })
+}
+
+export function linkVersions(drawingId, otherDrawingId) {
+  return request(`/drawings/${drawingId}/link-version`, {
+    method: 'POST',
+    ...json({ other_drawing_id: otherDrawingId }),
+  })
+}
+
+export function unlinkVersion(drawingId) {
+  return request(`/drawings/${drawingId}/unlink-version`, { method: 'POST' })
+}
+
+export function getFileSuggestions(fileId) {
+  return request(`/files/${fileId}/suggestions`)
+}
+
+export function assignFile(fileId, payload) {
+  return request(`/files/${fileId}/assign`, { method: 'POST', ...json(payload) })
+}
+
+export function unassignFile(fileId) {
+  return request(`/files/${fileId}/unassign`, { method: 'POST' })
+}
+
 export function getStats() {
   return request('/stats')
 }
