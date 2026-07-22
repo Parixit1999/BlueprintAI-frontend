@@ -120,6 +120,7 @@ export default function Dashboard() {
 
   const pendingReview = stats.documents_by_status.extracted ?? 0
   const failed = stats.documents_by_status.failed ?? 0
+  const processing = stats.documents_by_status.ingesting ?? 0
   const unassigned = stats.documents_unassigned ?? 0
   const rated = (stats.feedback_helpful ?? 0) + (stats.feedback_unhelpful ?? 0)
   const typeParts = Object.entries(stats.documents_by_type).map(([type, value], i) => ({
@@ -151,11 +152,13 @@ export default function Dashboard() {
         <Tile
           label="Documents"
           value={stats.documents_total}
-          hint={
-            failed > 0
-              ? `${stats.documents_by_status.ingested ?? 0} ingested · ${failed} failed`
-              : `${stats.documents_by_status.ingested ?? 0} ingested`
-          }
+          hint={[
+            `${stats.documents_by_status.ingested ?? 0} ingested`,
+            processing > 0 && `${processing} processing`,
+            failed > 0 && `${failed} failed`,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
           to="/documents"
         />
         <Tile

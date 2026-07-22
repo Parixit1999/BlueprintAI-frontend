@@ -48,44 +48,89 @@ export function UploadQueueProvider({ children }) {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...changes } : i)))
   }
 
+  // Adaptive parallel ingestion. Starts at 3 documents at once, ramps toward
+  // MAX while extractions succeed, and halves itself if the AI provider
+  // starts rate-limiting - so batches run as fast as the account's quotas
+  // allow without hand-tuning. (True autoscaling - server-side workers - is
+  // an AWS-deployment concern; this governs the browser's upload queue.)
+  const MIN_WORKERS = 2
+  const MAX_WORKERS = 8
+  const START_WORKERS = 3
+
+  async function processOne(next) {
+    patch(next.id, { status: 'uploading', percent: 0 })
+    try {
+      const res = await uploadFile(
+        next.file,
+        next.name,
+        (p) => {
+          if (p.phase === 'uploading') patch(next.id, { status: 'uploading', percent: p.percent })
+          else patch(next.id, { status: 'processing' })
+        },
+        next.folderId ?? null,
+      )
+      const sugg = res.suggestions ?? {}
+      const topDrawing = (sugg.drawing_suggestions ?? [])[0] ?? null
+      const topProject = (sugg.project_suggestions ?? [])[0] ?? null
+      patch(next.id, {
+        status: 'done',
+        fileId: res.file_id,
+        regions: res.chunks.length,
+        autoAssignment: res.auto_assignment ?? null,
+        topDrawing,
+        topProject,
+      })
+      return 'ok'
+    } catch (e) {
+      patch(next.id, { status: 'error', error: e.message })
+      return /throttl|rate limit|too many requests|slow down/i.test(e.message)
+        ? 'throttled'
+        : 'error'
+    }
+  }
+
   async function processQueue() {
     if (runningRef.current) return
     runningRef.current = true
-    // sequential: the local vision model can't handle many images at once
-    while (true) {
-      const next = await new Promise((resolve) =>
+    const claimNext = () =>
+      new Promise((resolve) =>
         setItems((prev) => {
-          resolve(prev.find((i) => i.status === 'queued') ?? null)
-          return prev
+          const next = prev.find((i) => i.status === 'queued') ?? null
+          resolve(next)
+          // claim immediately so parallel workers never pick the same item
+          return next
+            ? prev.map((i) => (i.id === next.id ? { ...i, status: 'uploading', percent: 0 } : i))
+            : prev
         }),
       )
-      if (!next) break
-      patch(next.id, { status: 'uploading', percent: 0 })
-      try {
-        const res = await uploadFile(
-          next.file,
-          next.name,
-          (p) => {
-            if (p.phase === 'uploading') patch(next.id, { status: 'uploading', percent: p.percent })
-            else patch(next.id, { status: 'processing' })
-          },
-          next.folderId ?? null,
-        )
-        const sugg = res.suggestions ?? {}
-        const topDrawing = (sugg.drawing_suggestions ?? [])[0] ?? null
-        const topProject = (sugg.project_suggestions ?? [])[0] ?? null
-        patch(next.id, {
-          status: 'done',
-          fileId: res.file_id,
-          regions: res.chunks.length,
-          autoAssignment: res.auto_assignment ?? null,
-          topDrawing,
-          topProject,
+
+    const state = { target: START_WORKERS, active: 0 }
+    await new Promise((finish) => {
+      const spawnOne = () => {
+        state.active++
+        claimNext().then((next) => {
+          if (!next) {
+            state.active--
+            if (state.active === 0) finish()
+            return
+          }
+          processOne(next).then((outcome) => {
+            if (outcome === 'throttled') {
+              state.target = Math.max(MIN_WORKERS, Math.ceil(state.target / 2))
+            } else if (outcome === 'ok') {
+              state.target = Math.min(MAX_WORKERS, state.target + 1)
+            }
+            state.active--
+            maybeSpawn()
+            if (state.active === 0) finish()
+          })
         })
-      } catch (e) {
-        patch(next.id, { status: 'error', error: e.message })
       }
-    }
+      const maybeSpawn = () => {
+        while (state.active < state.target) spawnOne()
+      }
+      maybeSpawn()
+    })
     runningRef.current = false
   }
 
