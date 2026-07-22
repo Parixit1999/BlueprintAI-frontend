@@ -260,6 +260,14 @@ export default function Documents() {
                     <td className="cell-name">
                       <div className="name-cell">
                         <span>{f.filename}</span>
+                        {f.is_drawing === false && (
+                          <span
+                            className="dup-tag not-drawing-tag"
+                            title="The AI judged this image is not an engineering drawing — check it before ingesting."
+                          >
+                            Not a drawing
+                          </span>
+                        )}
                         {f.is_duplicate && (
                           <span
                             className="dup-tag"
