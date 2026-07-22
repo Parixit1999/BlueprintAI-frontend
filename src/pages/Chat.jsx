@@ -10,7 +10,7 @@ import {
 } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import remarkGfm from 'remark-gfm'
 import {
   createChatSession,
@@ -244,6 +244,10 @@ export default function Chat() {
   const [deleting, setDeleting] = useState(false)
   const toast = useToast()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  // arriving via "Ask about this drawing": scope every question to that document
+  const fileScope = searchParams.get('file')
+  const fileScopeName = searchParams.get('name')
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -383,7 +387,7 @@ export default function Chat() {
     let streamError = null
     try {
       // evidence arrives first (meta), then the answer streams token by token
-      await streamChatMessage(sessionId, question, projectScope, {
+      await streamChatMessage(sessionId, question, fileScope ? null : projectScope, {
         meta: (d) =>
           setMessages((m) =>
             m.map((x) =>
@@ -407,7 +411,7 @@ export default function Chat() {
         error: (d) => {
           streamError = d?.detail || 'Generation failed'
         },
-      })
+      }, fileScope)
       if (streamError) throw new Error(streamError)
       listChatSessions().then(setSessions)
     } catch (err) {
@@ -501,6 +505,26 @@ export default function Chat() {
           )}
           <div ref={bottomRef} />
         </div>
+        {fileScope && (
+          <div className="file-scope-chip">
+            <Badge
+              variant="light"
+              size="lg"
+              rightSection={
+                <ActionIcon
+                  variant="transparent"
+                  size="xs"
+                  aria-label="Stop chatting about this document"
+                  onClick={() => setSearchParams({})}
+                >
+                  ×
+                </ActionIcon>
+              }
+            >
+              Chatting about: {fileScopeName ?? 'this document'}
+            </Badge>
+          </div>
+        )}
         <form className="chat-input" onSubmit={send}>
           <input
             value={input}
