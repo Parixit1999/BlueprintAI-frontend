@@ -1,5 +1,5 @@
-import { Button, SegmentedControl } from '@mantine/core'
-import { IconArrowLeft, IconTrash } from '@tabler/icons-react'
+import { Button, SegmentedControl, Tooltip } from '@mantine/core'
+import { IconArrowLeft, IconSparkles, IconTrash } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { confirmAndIngest, deleteFile, getExtraction, reextractFile } from '../api'
@@ -224,6 +224,16 @@ export default function DocumentDetail() {
             >
               <div className="chunk-meta">
                 <span className="region">{c.region_type.replace('_', ' ')}</span>
+                {c.region_type === 'summary' && (
+                  <Tooltip
+                    label="Written by AI from the drawing image — not text printed on the drawing. Review and edit it like any other region."
+                    maw={300}
+                    multiline
+                    withArrow
+                  >
+                    <IconSparkles size={14} color="var(--mantine-color-brand-6)" />
+                  </Tooltip>
+                )}
                 <ConfidenceBadge level={c.confidence} />
                 {!c.bbox && <span className="muted">no location</span>}
                 {reviewing && (
