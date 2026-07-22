@@ -48,10 +48,14 @@ export function UploadQueueProvider({ children }) {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...changes } : i)))
   }
 
-  // How many documents extract at once. The cloud vision model handles
-  // parallel calls fine; the cap keeps memory and provider throttling sane.
-  // (The old sequential queue was a local-vision-model limitation.)
-  const CONCURRENCY = 3
+  // Adaptive parallel ingestion. Starts at 3 documents at once, ramps toward
+  // MAX while extractions succeed, and halves itself if the AI provider
+  // starts rate-limiting - so batches run as fast as the account's quotas
+  // allow without hand-tuning. (True autoscaling - server-side workers - is
+  // an AWS-deployment concern; this governs the browser's upload queue.)
+  const MIN_WORKERS = 2
+  const MAX_WORKERS = 8
+  const START_WORKERS = 3
 
   async function processOne(next) {
     patch(next.id, { status: 'uploading', percent: 0 })
@@ -76,8 +80,12 @@ export function UploadQueueProvider({ children }) {
         topDrawing,
         topProject,
       })
+      return 'ok'
     } catch (e) {
       patch(next.id, { status: 'error', error: e.message })
+      return /throttl|rate limit|too many requests|slow down/i.test(e.message)
+        ? 'throttled'
+        : 'error'
     }
   }
 
@@ -95,14 +103,34 @@ export function UploadQueueProvider({ children }) {
             : prev
         }),
       )
-    const worker = async () => {
-      for (;;) {
-        const next = await claimNext()
-        if (!next) return
-        await processOne(next)
+
+    const state = { target: START_WORKERS, active: 0 }
+    await new Promise((finish) => {
+      const spawnOne = () => {
+        state.active++
+        claimNext().then((next) => {
+          if (!next) {
+            state.active--
+            if (state.active === 0) finish()
+            return
+          }
+          processOne(next).then((outcome) => {
+            if (outcome === 'throttled') {
+              state.target = Math.max(MIN_WORKERS, Math.ceil(state.target / 2))
+            } else if (outcome === 'ok') {
+              state.target = Math.min(MAX_WORKERS, state.target + 1)
+            }
+            state.active--
+            maybeSpawn()
+            if (state.active === 0) finish()
+          })
+        })
       }
-    }
-    await Promise.all(Array.from({ length: CONCURRENCY }, worker))
+      const maybeSpawn = () => {
+        while (state.active < state.target) spawnOne()
+      }
+      maybeSpawn()
+    })
     runningRef.current = false
   }
 
