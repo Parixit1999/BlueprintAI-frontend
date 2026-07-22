@@ -48,44 +48,61 @@ export function UploadQueueProvider({ children }) {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...changes } : i)))
   }
 
+  // How many documents extract at once. The cloud vision model handles
+  // parallel calls fine; the cap keeps memory and provider throttling sane.
+  // (The old sequential queue was a local-vision-model limitation.)
+  const CONCURRENCY = 3
+
+  async function processOne(next) {
+    patch(next.id, { status: 'uploading', percent: 0 })
+    try {
+      const res = await uploadFile(
+        next.file,
+        next.name,
+        (p) => {
+          if (p.phase === 'uploading') patch(next.id, { status: 'uploading', percent: p.percent })
+          else patch(next.id, { status: 'processing' })
+        },
+        next.folderId ?? null,
+      )
+      const sugg = res.suggestions ?? {}
+      const topDrawing = (sugg.drawing_suggestions ?? [])[0] ?? null
+      const topProject = (sugg.project_suggestions ?? [])[0] ?? null
+      patch(next.id, {
+        status: 'done',
+        fileId: res.file_id,
+        regions: res.chunks.length,
+        autoAssignment: res.auto_assignment ?? null,
+        topDrawing,
+        topProject,
+      })
+    } catch (e) {
+      patch(next.id, { status: 'error', error: e.message })
+    }
+  }
+
   async function processQueue() {
     if (runningRef.current) return
     runningRef.current = true
-    // sequential: the local vision model can't handle many images at once
-    while (true) {
-      const next = await new Promise((resolve) =>
+    const claimNext = () =>
+      new Promise((resolve) =>
         setItems((prev) => {
-          resolve(prev.find((i) => i.status === 'queued') ?? null)
-          return prev
+          const next = prev.find((i) => i.status === 'queued') ?? null
+          resolve(next)
+          // claim immediately so parallel workers never pick the same item
+          return next
+            ? prev.map((i) => (i.id === next.id ? { ...i, status: 'uploading', percent: 0 } : i))
+            : prev
         }),
       )
-      if (!next) break
-      patch(next.id, { status: 'uploading', percent: 0 })
-      try {
-        const res = await uploadFile(
-          next.file,
-          next.name,
-          (p) => {
-            if (p.phase === 'uploading') patch(next.id, { status: 'uploading', percent: p.percent })
-            else patch(next.id, { status: 'processing' })
-          },
-          next.folderId ?? null,
-        )
-        const sugg = res.suggestions ?? {}
-        const topDrawing = (sugg.drawing_suggestions ?? [])[0] ?? null
-        const topProject = (sugg.project_suggestions ?? [])[0] ?? null
-        patch(next.id, {
-          status: 'done',
-          fileId: res.file_id,
-          regions: res.chunks.length,
-          autoAssignment: res.auto_assignment ?? null,
-          topDrawing,
-          topProject,
-        })
-      } catch (e) {
-        patch(next.id, { status: 'error', error: e.message })
+    const worker = async () => {
+      for (;;) {
+        const next = await claimNext()
+        if (!next) return
+        await processOne(next)
       }
     }
+    await Promise.all(Array.from({ length: CONCURRENCY }, worker))
     runningRef.current = false
   }
 

@@ -1,4 +1,4 @@
-import { Button, SegmentedControl, Tooltip } from '@mantine/core'
+import { Button, SegmentedControl, Textarea, Tooltip } from '@mantine/core'
 import { IconArrowLeft, IconSparkles, IconTrash } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -252,7 +252,12 @@ export default function DocumentDetail() {
                 )}
               </div>
               {reviewing ? (
-                <input
+                // autosize so long text (summaries especially) is fully
+                // visible and editable, not clipped to one line
+                <Textarea
+                  autosize
+                  minRows={1}
+                  maxRows={10}
                   value={edits[i] ?? c.chunk_text ?? ''}
                   placeholder="(unreadable — type the correct value or reject)"
                   disabled={rejected.has(i)}
