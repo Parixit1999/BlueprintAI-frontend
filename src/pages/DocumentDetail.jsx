@@ -1,5 +1,5 @@
 import { Button, SegmentedControl, Textarea, Tooltip } from '@mantine/core'
-import { IconArrowLeft, IconSparkles, IconTrash } from '@tabler/icons-react'
+import { IconArrowLeft, IconMessageCircle, IconSparkles, IconTrash } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { confirmAndIngest, deleteFile, getExtraction, reextractFile } from '../api'
@@ -12,6 +12,7 @@ import { useToast } from '../components/Toast'
 export default function DocumentDetail() {
   const { fileId } = useParams()
   const [status, setStatus] = useState(null)
+  const [filename, setFilename] = useState(null)
   const [chunks, setChunks] = useState([])
   const [edits, setEdits] = useState({})
   const [rejected, setRejected] = useState(new Set())
@@ -28,6 +29,7 @@ export default function DocumentDetail() {
       .then((res) => {
         setChunks(res.chunks)
         setStatus(res.status)
+        setFilename(res.filename ?? null)
       })
       .catch((e) => toast.error(e.message))
   }, [fileId])
@@ -161,6 +163,18 @@ export default function DocumentDetail() {
             {ingesting && (
               <Button loading disabled>
                 Processing…
+              </Button>
+            )}
+            {status === 'ingested' && (
+              <Button
+                leftSection={<IconMessageCircle size={16} />}
+                onClick={() =>
+                  navigate(
+                    `/chat?file=${fileId}${filename ? `&name=${encodeURIComponent(filename)}` : ''}`,
+                  )
+                }
+              >
+                Ask about this drawing
               </Button>
             )}
             {status === 'ingested' && (

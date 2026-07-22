@@ -1574,3 +1574,8 @@ tbody tr.no-hover:hover {
     min-width: 140px;
   }
 }
+
+/* "Chatting about: <file>" scope indicator above the chat input */
+.file-scope-chip {
+  padding: 8px 16px 0;
+}

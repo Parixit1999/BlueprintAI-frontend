@@ -195,24 +195,24 @@ export function getChatMessages(sessionId) {
   return request(`/chats/${sessionId}`)
 }
 
-export function sendChatMessage(sessionId, question, projectId = null) {
+export function sendChatMessage(sessionId, question, projectId = null, fileId = null) {
   return request(`/chats/${sessionId}/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question, project_id: projectId }),
+    body: JSON.stringify({ question, project_id: projectId, file_id: fileId }),
   })
 }
 
 // SSE over fetch (POST bodies rule out EventSource). Emits handler callbacks:
 // meta (user message + evidence, before generation), token ({t}), done
 // (stored assistant message), error ({detail}).
-export async function streamChatMessage(sessionId, question, projectId, handlers) {
+export async function streamChatMessage(sessionId, question, projectId, handlers, fileId = null) {
   let res
   try {
     res = await fetch(`${API_BASE}/chats/${sessionId}/messages/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, project_id: projectId }),
+      body: JSON.stringify({ question, project_id: projectId, file_id: fileId }),
     })
   } catch {
     throw new Error(CONNECTION_MESSAGE)
