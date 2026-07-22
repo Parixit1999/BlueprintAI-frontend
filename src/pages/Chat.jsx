@@ -1,8 +1,9 @@
-import { ActionIcon, Badge, Button, Select, TextInput } from '@mantine/core'
+import { ActionIcon, Badge, Button, Select, TextInput, Tooltip } from '@mantine/core'
 import {
   IconPencil,
   IconPlus,
   IconSend,
+  IconSparkles,
   IconThumbDown,
   IconThumbUp,
   IconTrash,
@@ -202,6 +203,16 @@ function AssistantMessage({ messageId, content, evidence, versionContext, feedba
                         {s.region_type === 'registry'
                           ? (s.label ?? 'registry')
                           : (s.dwg_number ?? s.region_type.replace('_', ' '))}
+                        {s.region_type === 'summary' && (
+                          <Tooltip
+                            label="AI-written description of the drawing — reviewed at ingestion, not text printed on the drawing."
+                            maw={280}
+                            multiline
+                            withArrow
+                          >
+                            <IconSparkles size={12} style={{ marginLeft: 4 }} />
+                          </Tooltip>
+                        )}
                       </span>
                       <span className="source-text">{s.chunk_text ?? '(unreadable)'}</span>
                       <span className="source-view">

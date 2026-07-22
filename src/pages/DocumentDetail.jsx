@@ -1,8 +1,8 @@
-import { Button, SegmentedControl } from '@mantine/core'
-import { IconArrowLeft, IconTrash } from '@tabler/icons-react'
+import { Button, SegmentedControl, Tooltip } from '@mantine/core'
+import { IconArrowLeft, IconSparkles, IconTrash } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { confirmAndIngest, deleteFile, getExtraction } from '../api'
+import { confirmAndIngest, deleteFile, getExtraction, reextractFile } from '../api'
 import { ConfidenceBadge } from '../components/Badges'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DrawingViewer from '../components/DrawingViewer'
@@ -18,6 +18,7 @@ export default function DocumentDetail() {
   const [focused, setFocused] = useState(null)
   const [busy, setBusy] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [reextracting, setReextracting] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const toast = useToast()
   const navigate = useNavigate()
@@ -37,7 +38,7 @@ export default function DocumentDetail() {
 
   // Title blocks carry the identifying facts, so they lead; the original
   // extraction index (i) stays attached because edits/rejections key on it.
-  const TYPE_ORDER = { title_block: 0, bom: 1, dimension: 2, note: 3 }
+  const TYPE_ORDER = { summary: 0, title_block: 1, bom: 2, dimension: 3, note: 4 }
   const visibleChunks = chunks
     .map((c, i) => ({ c, i }))
     .filter(({ c }) => regionFilter === 'all' || c.region_type === regionFilter)
@@ -97,6 +98,25 @@ export default function DocumentDetail() {
     }
   }
 
+  async function handleReextract() {
+    setReextracting(true)
+    try {
+      const res = await reextractFile(fileId)
+      setChunks(res.chunks)
+      setStatus('extracted')
+      setEdits({})
+      setRejected(new Set())
+      setFocused(null)
+      toast.success(
+        `Re-read the drawing: ${res.chunks.length} regions found. Review and confirm to update the knowledge base.`,
+      )
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      setReextracting(false)
+    }
+  }
+
   async function handleDelete() {
     setDeleting(true)
     try {
@@ -143,6 +163,16 @@ export default function DocumentDetail() {
                 Processing…
               </Button>
             )}
+            {status === 'ingested' && (
+              <Button
+                variant="default"
+                loading={reextracting}
+                onClick={handleReextract}
+                title="Re-read this drawing with the current AI models — useful after model upgrades. You review the regions again before they replace the knowledge base entries."
+              >
+                Re-extract with latest AI
+              </Button>
+            )}
             <Button
               variant="light"
               color="red"
@@ -172,11 +202,11 @@ export default function DocumentDetail() {
             onChange={setRegionFilter}
             data={[
               { value: 'all', label: `All (${chunks.length})` },
-              ...['title_block', 'bom', 'dimension', 'note']
+              ...['summary', 'title_block', 'bom', 'dimension', 'note']
                 .filter((t) => typeCounts[t])
                 .map((t) => ({
                   value: t,
-                  label: `${t === 'title_block' ? 'Title block' : t === 'bom' ? 'BOM' : t[0].toUpperCase() + t.slice(1) + 's'} (${typeCounts[t]})`,
+                  label: `${t === 'title_block' ? 'Title block' : t === 'bom' ? 'BOM' : t === 'summary' ? 'Summary' : t[0].toUpperCase() + t.slice(1) + 's'} (${typeCounts[t]})`,
                 })),
             ]}
           />
@@ -194,6 +224,16 @@ export default function DocumentDetail() {
             >
               <div className="chunk-meta">
                 <span className="region">{c.region_type.replace('_', ' ')}</span>
+                {c.region_type === 'summary' && (
+                  <Tooltip
+                    label="Written by AI from the drawing image — not text printed on the drawing. Review and edit it like any other region."
+                    maw={300}
+                    multiline
+                    withArrow
+                  >
+                    <IconSparkles size={14} color="var(--mantine-color-brand-6)" />
+                  </Tooltip>
+                )}
                 <ConfidenceBadge level={c.confidence} />
                 {!c.bbox && <span className="muted">no location</span>}
                 {reviewing && (

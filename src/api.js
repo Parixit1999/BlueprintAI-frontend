@@ -101,6 +101,10 @@ export function retryExtraction(fileId) {
   return request(`/files/${fileId}/retry`, { method: 'POST' })
 }
 
+export function reextractFile(fileId) {
+  return request(`/files/${fileId}/reextract`, { method: 'POST' })
+}
+
 // --- Phase 1: projects / drawings / sets ---
 
 const json = (body) => ({
