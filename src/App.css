@@ -692,6 +692,17 @@ tbody tr.no-hover:hover {
   text-decoration: underline;
 }
 
+/* informational variant: pipeline disclosures (format conversion notes) */
+.notice.notice-info {
+  border-color: rgba(34, 139, 230, 0.35);
+  background: rgba(34, 139, 230, 0.07);
+  color: var(--mantine-color-blue-8, #1864ab);
+}
+
+.notice.notice-info .notice-icon {
+  background: var(--mantine-color-blue-6, #228be6);
+}
+
 /* ---------- Confirm dialog ---------- */
 .confirm-message {
   color: var(--ink-2);

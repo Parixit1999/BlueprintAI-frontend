@@ -40,11 +40,16 @@ export default function DocumentDetail() {
 
   const reviewing = status === 'extracted'
 
+  // Pipeline disclosures (e.g. "converted from DWG") surface as a banner, not
+  // review cards - they are not drawing content and are never ingested.
+  const advisories = chunks.filter((c) => c.advisory)
+
   // Title blocks carry the identifying facts, so they lead; the original
   // extraction index (i) stays attached because edits/rejections key on it.
   const TYPE_ORDER = { summary: 0, title_block: 1, bom: 2, dimension: 3, note: 4 }
   const visibleChunks = chunks
     .map((c, i) => ({ c, i }))
+    .filter(({ c }) => !c.advisory)
     .filter(({ c }) => regionFilter === 'all' || c.region_type === regionFilter)
     .sort(
       (a, b) =>
@@ -52,9 +57,11 @@ export default function DocumentDetail() {
         a.i - b.i,
     )
   const typeCounts = chunks.reduce((acc, c) => {
+    if (c.advisory) return acc
     acc[c.region_type] = (acc[c.region_type] ?? 0) + 1
     return acc
   }, {})
+  const reviewableCount = chunks.filter((c) => !c.advisory).length
   const ingesting = status === 'ingesting'
 
   // Ingestion embeds every region (minutes for dense sheets). While it runs,
@@ -201,6 +208,13 @@ export default function DocumentDetail() {
         }
       />
 
+      {advisories.map((a, idx) => (
+        <div className="notice notice-info" key={idx}>
+          <span className="notice-icon">i</span>
+          <span>{a.chunk_text}</span>
+        </div>
+      ))}
+
       {isDrawing === false && (
         <div className="notice">
           <span className="notice-icon">!</span>
@@ -228,7 +242,7 @@ export default function DocumentDetail() {
             value={regionFilter}
             onChange={setRegionFilter}
             data={[
-              { value: 'all', label: `All (${chunks.length})` },
+              { value: 'all', label: `All (${reviewableCount})` },
               ...['summary', 'title_block', 'bom', 'dimension', 'note']
                 .filter((t) => typeCounts[t])
                 .map((t) => ({

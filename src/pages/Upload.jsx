@@ -95,7 +95,7 @@ export default function Upload() {
         description={
           uploadFolderId
             ? 'Files uploaded here land in the selected folder in Files.'
-            : 'Add CAD (.dxf, .dwg), PDFs (vector or scanned), or drawing images (PNG, JPG, TIFF...). Drop many files at once, or a .zip archive for bulk import.'
+            : 'Add CAD (.dxf, .dwg), Revit models (.rvt), PDFs (vector or scanned), or drawing images (PNG, JPG, TIFF, HEIC...). Drop many files at once, or a .zip archive for bulk import.'
         }
       />
 
@@ -132,7 +132,7 @@ export default function Upload() {
               Drag drawings here or click to browse
             </Text>
             <Text size="sm" c="dimmed" mt={4}>
-              DXF, DWG, PDF, PNG, JPG, TIFF — or a ZIP of drawings. Multiple files supported.
+              DXF, DWG, RVT, PDF, PNG, JPG, TIFF, HEIC — or a ZIP of drawings. Multiple files supported.
             </Text>
           </Box>
         </Stack>
