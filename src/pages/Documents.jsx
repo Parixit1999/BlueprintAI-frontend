@@ -1,8 +1,8 @@
 import { Button } from '@mantine/core'
-import { IconUpload } from '@tabler/icons-react'
+import { IconDatabaseImport, IconUpload } from '@tabler/icons-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { deleteFile, listFiles, retryExtraction } from '../api'
+import { confirmAndIngest, deleteFile, listFiles, retryExtraction } from '../api'
 import AssignModal from '../components/AssignModal'
 import { StatusBadge } from '../components/Badges'
 import CompareModal from '../components/CompareModal'
@@ -34,6 +34,8 @@ export default function Documents() {
   const [comparing, setComparing] = useState(null)
   const [assigning, setAssigning] = useState(null)
   const [retryingId, setRetryingId] = useState(null)
+  const [confirmIngestAll, setConfirmIngestAll] = useState(false)
+  const [bulkIngesting, setBulkIngesting] = useState(false)
   const toast = useToast()
   const navigate = useNavigate()
 
@@ -84,6 +86,10 @@ export default function Documents() {
     () => (files ?? []).filter((f) => f.is_duplicate).length,
     [files],
   )
+  const pendingReviewCount = useMemo(
+    () => (files ?? []).filter((f) => f.status === 'extracted').length,
+    [files],
+  )
 
   const filtered = useMemo(() => {
     return (files ?? []).filter((f) => {
@@ -96,6 +102,37 @@ export default function Documents() {
       return true
     })
   }, [files, query, typeFilter, statusFilter, assignedFilter, dupOnly])
+
+  // Bulk-confirm every document awaiting review, as extracted (no
+  // corrections). Three at a time, same as uploads; each document is
+  // protected by the backend's atomic ingest claim.
+  async function ingestAll() {
+    setConfirmIngestAll(false)
+    setBulkIngesting(true)
+    const queue = (files ?? []).filter((f) => f.status === 'extracted')
+    let ok = 0
+    let failed = 0
+    const worker = async () => {
+      for (;;) {
+        const f = queue.shift()
+        if (!f) return
+        try {
+          await confirmAndIngest(f.file_id, {}, [])
+          ok++
+        } catch (e) {
+          if (!/already/i.test(e.message)) failed++
+        }
+        refresh()
+      }
+    }
+    // show the Processing badges as soon as the claims land
+    setTimeout(refresh, 1200)
+    await Promise.all(Array.from({ length: 3 }, worker))
+    setBulkIngesting(false)
+    refresh()
+    if (failed) toast.error(`${ok} added to the knowledge base; ${failed} failed — see the list for details.`)
+    else toast.success(`${ok} document${ok === 1 ? '' : 's'} added to the knowledge base.`)
+  }
 
   async function confirmDelete() {
     setDeleting(true)
@@ -118,9 +155,21 @@ export default function Documents() {
         description="Engineering drawings in the knowledge base"
         onRefresh={refresh}
         actions={
-          <Button leftSection={<IconUpload size={16} />} onClick={() => navigate('/upload')}>
-            Upload drawings
-          </Button>
+          <>
+            {pendingReviewCount > 0 && (
+              <Button
+                variant="default"
+                leftSection={<IconDatabaseImport size={16} />}
+                loading={bulkIngesting}
+                onClick={() => setConfirmIngestAll(true)}
+              >
+                Ingest all ({pendingReviewCount})
+              </Button>
+            )}
+            <Button leftSection={<IconUpload size={16} />} onClick={() => navigate('/upload')}>
+              Upload drawings
+            </Button>
+          </>
         }
       />
 
@@ -359,6 +408,25 @@ export default function Documents() {
             setComparing(null)
             refresh()
           }}
+        />
+      )}
+
+      {confirmIngestAll && (
+        <ConfirmDialog
+          title={`Ingest all ${pendingReviewCount} documents?`}
+          message={
+            <>
+              This adds all {pendingReviewCount} documents awaiting review to the knowledge base{' '}
+              <strong>as extracted, without individual review</strong> — including any
+              low-confidence regions. You can still open, re-extract, or delete any document
+              afterwards. Large drawings take a few minutes each; they’ll show as
+              “Processing” while they’re added.
+            </>
+          }
+          confirmLabel="Ingest all"
+          busy={bulkIngesting}
+          onConfirm={ingestAll}
+          onCancel={() => setConfirmIngestAll(false)}
         />
       )}
 
