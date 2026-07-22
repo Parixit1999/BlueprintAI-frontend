@@ -22,14 +22,17 @@ export default function Login({ onLogin }) {
 
   return (
     <div className="login-screen">
-      <Paper withBorder shadow="md" p="xl" radius="md" className="login-card">
+      <Paper shadow="xl" p="xl" radius="md" className="login-card">
         <form onSubmit={submit}>
           <Stack gap="md">
-            <div>
-              <Title order={2}>BlueprintAI</Title>
-              <Text c="dimmed" size="sm">
-                Sign in to your drawing workspace
-              </Text>
+            <div className="login-brand">
+              <div className="login-brand-mark">B</div>
+              <div>
+                <Title order={2}>BlueprintAI</Title>
+                <Text c="dimmed" size="sm">
+                  Sign in to your drawing workspace
+                </Text>
+              </div>
             </div>
             {error && (
               <Alert color="red" icon={<IconLock size={16} />}>
@@ -57,6 +60,12 @@ export default function Login({ onLogin }) {
           </Stack>
         </form>
       </Paper>
+      {/* drawing-sheet title block, bottom-right like a real sheet */}
+      <div className="login-titleblock" aria-hidden="true">
+        <span>BLUEPRINTAI</span>
+        <span>DRAWING INTELLIGENCE</span>
+        <span>SHT 1 OF 1 · REV A</span>
+      </div>
     </div>
   )
 }
