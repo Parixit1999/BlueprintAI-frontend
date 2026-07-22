@@ -248,6 +248,16 @@ export default function Chat() {
   // arriving via "Ask about this drawing": scope every question to that document
   const fileScope = searchParams.get('file')
   const fileScopeName = searchParams.get('name')
+
+  // a document-scoped conversation is its own context: start clean rather
+  // than appending to whatever chat happened to be open
+  useEffect(() => {
+    if (fileScope) {
+      setActive(null)
+      setMessages([])
+      setSourceOpen(null)
+    }
+  }, [fileScope])
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -293,6 +303,7 @@ export default function Chat() {
   }
 
   async function openSession(sessionId) {
+    if (fileScope && sessionId !== active) setSearchParams({}) // other sessions are their own context
     setActive(sessionId)
     setSourceOpen(null)
     try {
