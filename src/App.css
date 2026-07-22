@@ -577,6 +577,11 @@ tbody tr:last-child td {
   gap: 8px;
 }
 
+.not-drawing-tag {
+  background: rgba(237, 161, 0, 0.14) !important;
+  color: #9a6a00 !important;
+}
+
 .dup-tag {
   display: inline-block;
   padding: 1px 8px;

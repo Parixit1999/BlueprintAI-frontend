@@ -13,6 +13,7 @@ export default function DocumentDetail() {
   const { fileId } = useParams()
   const [status, setStatus] = useState(null)
   const [filename, setFilename] = useState(null)
+  const [isDrawing, setIsDrawing] = useState(null)
   const [chunks, setChunks] = useState([])
   const [edits, setEdits] = useState({})
   const [rejected, setRejected] = useState(new Set())
@@ -30,6 +31,7 @@ export default function DocumentDetail() {
         setChunks(res.chunks)
         setStatus(res.status)
         setFilename(res.filename ?? null)
+        setIsDrawing(res.is_drawing ?? null)
       })
       .catch((e) => toast.error(e.message))
   }, [fileId])
@@ -198,6 +200,17 @@ export default function DocumentDetail() {
           </>
         }
       />
+
+      {isDrawing === false && (
+        <div className="notice">
+          <span className="notice-icon">!</span>
+          <span>
+            The AI judged that this image is <strong>not an engineering drawing</strong> — see
+            its summary for what it appears to be. If it was uploaded by mistake, delete it;
+            ingesting it would add non-drawing content to the knowledge base.
+          </span>
+        </div>
+      )}
 
       <div className="detail-grid">
         <div className="panel viewer-panel">
