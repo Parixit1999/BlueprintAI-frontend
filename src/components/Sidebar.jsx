@@ -63,10 +63,16 @@ function Footer() {
   const [changing, setChanging] = useState(false)
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
+  const [nextError, setNextError] = useState(null)
   const [busy, setBusy] = useState(false)
 
   async function submitPassword(e) {
     e.preventDefault()
+    if (next.length < 8) {
+      setNextError('Password must be at least 8 characters long.')
+      return
+    }
+    setNextError(null)
     setBusy(true)
     try {
       await changePassword(current, next)
@@ -118,8 +124,12 @@ function Footer() {
               <PasswordInput
                 label="New password"
                 description="At least 8 characters"
+                error={nextError}
                 value={next}
-                onChange={(e) => setNext(e.target.value)}
+                onChange={(e) => {
+                  setNext(e.target.value)
+                  if (nextError && e.target.value.length >= 8) setNextError(null)
+                }}
                 autoComplete="new-password"
                 required
               />
