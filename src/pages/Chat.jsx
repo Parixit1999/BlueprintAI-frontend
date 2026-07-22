@@ -264,7 +264,8 @@ export default function Chat() {
     listChatSessions()
       .then((s) => {
         setSessions(s)
-        if (s.length > 0) openSession(s[0].session_id)
+        // arriving scoped to a document starts fresh - don't auto-open
+        if (s.length > 0 && !fileScope) openSession(s[0].session_id)
       })
       .catch((e) => toast.error(e.message))
     // scope selector options; chat still works if this fails
