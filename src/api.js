@@ -15,12 +15,38 @@ const STATUS_FALLBACKS = {
 
 const GENERIC_MESSAGE = 'Something didn’t work as expected. Please try again.'
 
+// ---------- Authentication ----------
+// Opaque bearer token from the backend, kept in localStorage. On any 401 the
+// token is dropped and an event fires so the app can show the login screen.
+const TOKEN_KEY = 'bp_token'
+
+export const getToken = () => localStorage.getItem(TOKEN_KEY)
+export const setToken = (token) => localStorage.setItem(TOKEN_KEY, token)
+export const clearToken = () => localStorage.removeItem(TOKEN_KEY)
+
+export function authHeaders() {
+  const token = getToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+function handleUnauthorized() {
+  clearToken()
+  window.dispatchEvent(new Event('bp:unauthorized'))
+}
+
 async function request(path, options = {}) {
   let res
   try {
-    res = await fetch(`${API_BASE}${path}`, options)
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: { ...authHeaders(), ...(options.headers ?? {}) },
+    })
   } catch {
     throw new Error(CONNECTION_MESSAGE)
+  }
+  if (res.status === 401 && path !== '/auth/login') {
+    handleUnauthorized()
+    throw new Error('Your session has expired. Please sign in again.')
   }
   if (!res.ok) {
     const body = await res.json().catch(() => null)
@@ -28,6 +54,30 @@ async function request(path, options = {}) {
   }
   if (res.status === 204) return null
   return res.json()
+}
+
+export function login(username, password) {
+  return request('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  })
+}
+
+export function logout() {
+  return request('/auth/logout', { method: 'POST' }).catch(() => null)
+}
+
+export function getMe() {
+  return request('/auth/me')
+}
+
+export function changePassword(currentPassword, newPassword) {
+  return request('/auth/password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  })
 }
 
 // Uploaded via XHR (not fetch) so we can report real progress. onProgress gets
@@ -42,6 +92,8 @@ export function uploadFile(file, filename, onProgress, folderId = null) {
 
     const xhr = new XMLHttpRequest()
     xhr.open('POST', `${API_BASE}/files/upload`)
+    const token = getToken()
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
 
     xhr.upload.onprogress = (e) => {
       if (!e.lengthComputable || !onProgress) return
@@ -211,11 +263,15 @@ export async function streamChatMessage(sessionId, question, projectId, handlers
   try {
     res = await fetch(`${API_BASE}/chats/${sessionId}/messages/stream`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ question, project_id: projectId, file_id: fileId }),
     })
   } catch {
     throw new Error(CONNECTION_MESSAGE)
+  }
+  if (res.status === 401) {
+    handleUnauthorized()
+    throw new Error('Your session has expired. Please sign in again.')
   }
   if (!res.ok || !res.body) {
     const body = await res.json().catch(() => null)
