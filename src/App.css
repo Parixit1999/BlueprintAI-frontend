@@ -830,22 +830,30 @@ tbody tr.no-hover:hover {
   opacity: 1;
 }
 
-/* full-screen drawing view: large, scrollable in both directions */
+/* full-screen drawing view: zoom via the toolbar, pan by dragging or
+   scrollbars. The zoomed wrapper's width is set inline (multiple of the
+   screen width); the image always fills its wrapper. */
 .viewer-fullscreen {
   overflow: auto;
   height: calc(100vh - 60px);
   padding: 16px;
   background: var(--page);
+  cursor: grab;
+  touch-action: none;
+}
+
+.viewer-fullscreen:active {
+  cursor: grabbing;
 }
 
 .viewer-large {
-  margin: 0 auto;
-  width: fit-content;
+  max-width: none; /* the base .viewer cap would defeat zoom widths > 100% */
 }
 
 .viewer-large img {
   max-width: none;
-  width: min(2400px, 180vw);
+  width: 100%;
+  user-select: none;
 }
 
 .viewer-highlight {
