@@ -38,7 +38,7 @@ export default function DocumentDetail() {
 
   // Title blocks carry the identifying facts, so they lead; the original
   // extraction index (i) stays attached because edits/rejections key on it.
-  const TYPE_ORDER = { title_block: 0, bom: 1, dimension: 2, note: 3 }
+  const TYPE_ORDER = { summary: 0, title_block: 1, bom: 2, dimension: 3, note: 4 }
   const visibleChunks = chunks
     .map((c, i) => ({ c, i }))
     .filter(({ c }) => regionFilter === 'all' || c.region_type === regionFilter)
@@ -202,11 +202,11 @@ export default function DocumentDetail() {
             onChange={setRegionFilter}
             data={[
               { value: 'all', label: `All (${chunks.length})` },
-              ...['title_block', 'bom', 'dimension', 'note']
+              ...['summary', 'title_block', 'bom', 'dimension', 'note']
                 .filter((t) => typeCounts[t])
                 .map((t) => ({
                   value: t,
-                  label: `${t === 'title_block' ? 'Title block' : t === 'bom' ? 'BOM' : t[0].toUpperCase() + t.slice(1) + 's'} (${typeCounts[t]})`,
+                  label: `${t === 'title_block' ? 'Title block' : t === 'bom' ? 'BOM' : t === 'summary' ? 'Summary' : t[0].toUpperCase() + t.slice(1) + 's'} (${typeCounts[t]})`,
                 })),
             ]}
           />
