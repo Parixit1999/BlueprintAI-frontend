@@ -1,14 +1,21 @@
-import { Burger, Drawer } from '@mantine/core'
+import { Burger, Button, Drawer, Menu, PasswordInput, Stack } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import {
   IconFolderOpen,
   IconFolders,
+  IconKey,
   IconLayoutDashboard,
+  IconLogout,
   IconMessageCircle,
   IconFileText,
   IconUpload,
 } from '@tabler/icons-react'
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
+import { changePassword } from '../api'
+import { useAuth } from '../context/AuthContext'
+import Modal from './Modal'
+import { useToast } from './Toast'
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: IconLayoutDashboard, end: true },
@@ -51,14 +58,79 @@ function Nav({ onNavigate }) {
 }
 
 function Footer() {
+  const { user, logout } = useAuth()
+  const toast = useToast()
+  const [changing, setChanging] = useState(false)
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function submitPassword(e) {
+    e.preventDefault()
+    setBusy(true)
+    try {
+      await changePassword(current, next)
+      toast.success('Password changed. Other sessions were signed out.')
+      setChanging(false)
+      setCurrent('')
+      setNext('')
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
-    <div className="sidebar-footer">
-      <div className="avatar">A</div>
-      <div>
-        <div className="user-name">Admin</div>
-        <div className="user-sub">Workspace owner</div>
-      </div>
-    </div>
+    <>
+      <Menu position="top-start" width={210} withArrow>
+        <Menu.Target>
+          <button type="button" className="sidebar-footer sidebar-footer-btn">
+            <div className="avatar">{(user?.username ?? '?')[0].toUpperCase()}</div>
+            <div>
+              <div className="user-name">{user?.username}</div>
+              <div className="user-sub">Workspace owner</div>
+            </div>
+          </button>
+        </Menu.Target>
+        <Menu.Dropdown>
+          <Menu.Item leftSection={<IconKey size={15} />} onClick={() => setChanging(true)}>
+            Change password
+          </Menu.Item>
+          <Menu.Item leftSection={<IconLogout size={15} />} color="red" onClick={logout}>
+            Log out
+          </Menu.Item>
+        </Menu.Dropdown>
+      </Menu>
+
+      {changing && (
+        <Modal title="Change password" onClose={() => setChanging(false)}>
+          <form onSubmit={submitPassword}>
+            <Stack gap="sm">
+              <PasswordInput
+                label="Current password"
+                value={current}
+                onChange={(e) => setCurrent(e.target.value)}
+                autoComplete="current-password"
+                required
+                autoFocus
+              />
+              <PasswordInput
+                label="New password"
+                description="At least 8 characters"
+                value={next}
+                onChange={(e) => setNext(e.target.value)}
+                autoComplete="new-password"
+                required
+              />
+              <Button type="submit" loading={busy}>
+                Change password
+              </Button>
+            </Stack>
+          </form>
+        </Modal>
+      )}
+    </>
   )
 }
 
