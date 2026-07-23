@@ -520,7 +520,21 @@ export default function Files() {
             onSearchChange={setMoveSearch}
             filter={filterMoveOptions}
             searchable
-            nothingFoundMessage="No folder matches — create it below"
+            nothingFoundMessage={
+              // the open dropdown covers everything below the input, so the
+              // create action must live INSIDE it to be reachable mid-typing
+              <Button
+                variant="subtle"
+                size="compact-sm"
+                fullWidth
+                loading={busy}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={createAndMove}
+              >
+                + Create “{moveSearch.split('/').map((s) => s.trim()).filter(Boolean).join(' / ')}”
+                and move here
+              </Button>
+            }
             comboboxProps={{ transitionProps: { duration: 0 } }}
           />
           {moveSearch.trim() && (
