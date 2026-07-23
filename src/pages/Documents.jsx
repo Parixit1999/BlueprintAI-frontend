@@ -2,7 +2,7 @@ import { Button } from '@mantine/core'
 import { IconDatabaseImport, IconUpload } from '@tabler/icons-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { confirmAndIngest, deleteFile, listFiles, retryExtraction } from '../api'
+import { confirmAndIngest, deleteFile, dismissDuplicate, listFiles, retryExtraction } from '../api'
 import AssignModal from '../components/AssignModal'
 import { StatusBadge } from '../components/Badges'
 import CompareModal from '../components/CompareModal'
@@ -144,6 +144,20 @@ export default function Documents() {
     refresh()
     if (failed) toast.error(`${ok} added to the knowledge base; ${failed} failed — see the list for details.`)
     else toast.success(`${ok} document${ok === 1 ? '' : 's'} added to the knowledge base.`)
+  }
+
+  async function handleNotDuplicate(f) {
+    try {
+      // dismiss every currently-flagged match for this document (both
+      // directions are stored server-side, so the partner clears too)
+      await Promise.all(
+        (f.similar_documents ?? []).map((s) => dismissDuplicate(f.file_id, s.file_id)),
+      )
+      toast.success('Marked as not a duplicate — the flag won’t come back for this pair.')
+      refresh()
+    } catch (e) {
+      toast.error(e.message)
+    }
   }
 
   async function confirmDelete() {
@@ -380,14 +394,25 @@ export default function Documents() {
                         </span>
                         <span>
                           {f.is_duplicate && (
-                            <Button
-                              variant="subtle"
-                              color="orange"
-                              size="compact-xs"
-                              onClick={() => setComparing(f)}
-                            >
-                              Compare
-                            </Button>
+                            <>
+                              <Button
+                                variant="subtle"
+                                color="orange"
+                                size="compact-xs"
+                                onClick={() => setComparing(f)}
+                              >
+                                Compare
+                              </Button>
+                              <Button
+                                variant="subtle"
+                                color="gray"
+                                size="compact-xs"
+                                title="I checked — these are different drawings. Removes the duplicate flag for this pair permanently."
+                                onClick={() => handleNotDuplicate(f)}
+                              >
+                                Not a duplicate
+                              </Button>
+                            </>
                           )}
                         </span>
                         <span>
