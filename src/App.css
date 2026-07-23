@@ -867,6 +867,7 @@ tbody tr.no-hover:hover {
 }
 
 .badge-status-ingesting,
+.badge-status-queued,
 .badge-status-uploaded,
 .badge-status-reviewed {
   color: var(--ink-2);

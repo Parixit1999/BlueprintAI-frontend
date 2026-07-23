@@ -3,6 +3,7 @@ const STATUS_LABEL = {
   uploaded: 'Uploaded',
   extracted: 'Needs review',
   ingesting: 'Processing',
+  queued: 'Queued', // client-side: waiting for a bulk-ingest worker
   reviewed: 'Reviewed',
   ingested: 'Ingested',
   failed: 'Failed',
