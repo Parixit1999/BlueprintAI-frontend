@@ -52,10 +52,36 @@ export default function DocumentDetail() {
     ['Scale', /\bSCALE\s*[:=]?\s*([^,;]{1,30})|(\d+\/\d+"\s*=\s*\d+'-?\d*"?)/i],
     ['Sheet', /\b(?:SHT|SHEET)\.?\s*(?:NO\.?)?\s*[:#]?\s*([A-Z0-9][A-Z0-9 .\/-]{0,14})/i],
   ]
-  const summaryChunk = chunks.find((c) => c.region_type === 'summary')
+  // Sheet-aware key info: the document overview (when present) is document-
+  // level; the summary and title block follow the sheet being viewed.
+  const [regionFilter, setRegionFilter] = useState('all')
+  const [confFilter, setConfFilter] = useState('all')
+  // multi-sheet navigation: the viewer shows currentPage; the region list
+  // follows it ('sheet' scope) unless the user widens to all sheets
+  const [currentPage, setCurrentPage] = useState(1)
+  const [sheetScope, setSheetScope] = useState('sheet')
+
+  const reviewing = status === 'extracted'
+  const pageCount = Math.max(1, ...chunks.map((c) => c.page ?? 1))
+
+  function goToPage(p) {
+    setCurrentPage(p)
+    setFocused(null)
+  }
+
+  const summaries = chunks.filter((c) => c.region_type === 'summary' && c.chunk_text)
+  const overviewChunk = summaries.find((c) =>
+    c.chunk_text.startsWith('Document overview ('),
+  )
+  const sheetSummary =
+    summaries.find(
+      (c) => c !== overviewChunk && (c.page ?? 1) === currentPage,
+    ) ?? (pageCount === 1 ? summaries.find((c) => c !== overviewChunk) : null)
   const titleChunks = chunks
     .map((c, i) => ({ c, i }))
     .filter(({ c }) => c.region_type === 'title_block' && !c.advisory && c.chunk_text)
+  const sheetTitleChunks =
+    pageCount > 1 ? titleChunks.filter(({ c }) => (c.page ?? 1) === currentPage) : titleChunks
   const keyFacts = []
   if (dwgNumber) keyFacts.push(['Drawing number', dwgNumber])
   if (projectName) keyFacts.push(['Project', projectName])
@@ -87,20 +113,6 @@ export default function DocumentDetail() {
     }
   }
 
-  const [regionFilter, setRegionFilter] = useState('all')
-  const [confFilter, setConfFilter] = useState('all')
-  // multi-sheet navigation: the viewer shows currentPage; the region list
-  // follows it ('sheet' scope) unless the user widens to all sheets
-  const [currentPage, setCurrentPage] = useState(1)
-  const [sheetScope, setSheetScope] = useState('sheet')
-
-  const reviewing = status === 'extracted'
-  const pageCount = Math.max(1, ...chunks.map((c) => c.page ?? 1))
-
-  function goToPage(p) {
-    setCurrentPage(p)
-    setFocused(null)
-  }
 
   // focusing a region pulls the viewer (and sheet scope) to its sheet
   useEffect(() => {
@@ -327,10 +339,26 @@ export default function DocumentDetail() {
                   ))}
                 </dl>
               )}
-              {summaryChunk && (
+              {overviewChunk && (
                 <>
                   <div className="key-info-sub">
-                    Summary
+                    Document overview
+                    <Tooltip
+                      label="Written by AI from all sheet summaries — not text printed on the drawing."
+                      maw={300}
+                      multiline
+                      withArrow
+                    >
+                      <IconSparkles size={13} color="var(--mantine-color-brand-6)" />
+                    </Tooltip>
+                  </div>
+                  <p className="key-info-summary">{overviewChunk.chunk_text}</p>
+                </>
+              )}
+              {sheetSummary && (
+                <>
+                  <div className="key-info-sub">
+                    {pageCount > 1 ? `Sheet ${currentPage} summary` : 'Summary'}
                     <Tooltip
                       label="Written by AI from the drawing image — not text printed on the drawing."
                       maw={300}
@@ -340,7 +368,7 @@ export default function DocumentDetail() {
                       <IconSparkles size={13} color="var(--mantine-color-brand-6)" />
                     </Tooltip>
                   </div>
-                  <p className="key-info-summary">{summaryChunk.chunk_text}</p>
+                  <p className="key-info-summary">{sheetSummary.chunk_text}</p>
                 </>
               )}
               {sheetIndex.length > 0 && (
@@ -371,10 +399,12 @@ export default function DocumentDetail() {
                   </table>
                 </>
               )}
-              {titleChunks.length > 0 && (
+              {sheetTitleChunks.length > 0 && (
                 <>
-                  <div className="key-info-sub">Title block</div>
-                  {titleChunks.map(({ c, i }) => (
+                  <div className="key-info-sub">
+                    {pageCount > 1 ? `Title block — sheet ${currentPage}` : 'Title block'}
+                  </div>
+                  {sheetTitleChunks.map(({ c, i }) => (
                     <p
                       key={i}
                       className={`key-info-line${focused === i ? ' focused' : ''}`}
