@@ -157,6 +157,14 @@ export function reextractFile(fileId) {
   return request(`/files/${fileId}/reextract`, { method: 'POST' })
 }
 
+export function dismissDuplicate(fileId, otherFileId) {
+  return request(`/files/${fileId}/not-duplicate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ other_file_id: otherFileId }),
+  })
+}
+
 // --- Phase 1: projects / drawings / sets ---
 
 const json = (body) => ({

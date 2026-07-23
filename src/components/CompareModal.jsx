@@ -12,7 +12,7 @@ import {
 } from '@mantine/core'
 import { IconArrowsDiff, IconTrash } from '@tabler/icons-react'
 import { useState } from 'react'
-import { deleteFile } from '../api'
+import { deleteFile, dismissDuplicate } from '../api'
 import { StatusBadge } from './Badges'
 import ConfirmDialog from './ConfirmDialog'
 import DrawingViewer from './DrawingViewer'
@@ -59,7 +59,23 @@ export default function CompareModal({ file, allFiles, onClose, onDeleted }) {
   const [matchId, setMatchId] = useState(matches[0]?.file_id ?? null)
   const [pendingDelete, setPendingDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const [dismissing, setDismissing] = useState(false)
   const toast = useToast()
+
+  async function notADuplicate() {
+    setDismissing(true)
+    try {
+      // veto the pair on screen; both directions clear server-side
+      await dismissDuplicate(file.file_id, matchId)
+      toast.success('Marked as not a duplicate — this pair won’t be flagged again.')
+      onDeleted?.() // parent refreshes the list, same as after a delete
+      onClose()
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      setDismissing(false)
+    }
+  }
 
   const match = matches.find((m) => m.file_id === matchId)
   // full metadata for the matched document comes from the already-loaded list
@@ -124,9 +140,19 @@ export default function CompareModal({ file, allFiles, onClose, onDeleted }) {
       </Grid>
 
       <Text size="xs" c="dimmed" mt="md" ta="center">
-        Review both drawings, then delete the copy you don't need. Deleting removes the document and
-        its extracted regions permanently.
+        Review both drawings, then delete the copy you don't need — or, if they are genuinely
+        different drawings, mark them as not duplicates and the flag won't come back.
       </Text>
+
+      <Center mt="sm">
+        <Button
+          variant="default"
+          loading={dismissing}
+          onClick={notADuplicate}
+        >
+          These are different — not a duplicate
+        </Button>
+      </Center>
 
       {pendingDelete && (
         <ConfirmDialog
