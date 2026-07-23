@@ -25,6 +25,10 @@ export default function DocumentDetail() {
   const toast = useToast()
   const navigate = useNavigate()
 
+  const [dwgNumber, setDwgNumber] = useState(null)
+  const [projectName, setProjectName] = useState(null)
+  const [showAllRegions, setShowAllRegions] = useState(false)
+
   useEffect(() => {
     getExtraction(fileId)
       .then((res) => {
@@ -32,11 +36,43 @@ export default function DocumentDetail() {
         setStatus(res.status)
         setFilename(res.filename ?? null)
         setIsDrawing(res.is_drawing ?? null)
+        setDwgNumber(res.dwg_number ?? null)
+        setProjectName(res.project_name ?? null)
       })
       .catch((e) => toast.error(e.message))
   }, [fileId])
 
+  // ---- Key information (ingested view) ----
+  // After ingestion the regions' job is chat retrieval, not human reading -
+  // the reader wants the registry facts. Distill them: labeled fields from
+  // title-block text plus the assignment, with the full list one click away.
+  const FACT_PATTERNS = [
+    ['Contract', /CONTRACT\s*(?:NO|NUMBER|#)?\.?\s*[:#]?\s*([A-Z0-9][A-Z0-9 .\/-]{0,24})/i],
+    ['Date', /\b((?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z.]*\s+\d{1,2},?\s+\d{4}|\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4})\b/i],
+    ['Scale', /\bSCALE\s*[:=]?\s*([^,;]{1,30})|(\d+\/\d+"\s*=\s*\d+'-?\d*"?)/i],
+    ['Sheet', /\b(?:SHT|SHEET)\.?\s*(?:NO\.?)?\s*[:#]?\s*([A-Z0-9][A-Z0-9 .\/-]{0,14})/i],
+  ]
+  const summaryChunk = chunks.find((c) => c.region_type === 'summary')
+  const titleChunks = chunks
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => c.region_type === 'title_block' && !c.advisory && c.chunk_text)
+  const keyFacts = []
+  if (dwgNumber) keyFacts.push(['Drawing number', dwgNumber])
+  if (projectName) keyFacts.push(['Project', projectName])
+  for (const [label, re] of FACT_PATTERNS) {
+    for (const { c } of titleChunks) {
+      const m = c.chunk_text.match(re)
+      if (!m) continue
+      const value = (m[1] ?? m[2] ?? m[0]).trim()
+      // a fact needs a digit - otherwise we matched a bare label ("SHT NO.")
+      if (!/\d/.test(value)) continue
+      keyFacts.push([label, value])
+      break
+    }
+  }
+
   const [regionFilter, setRegionFilter] = useState('all')
+  const [confFilter, setConfFilter] = useState('all')
 
   const reviewing = status === 'extracted'
 
@@ -51,11 +87,17 @@ export default function DocumentDetail() {
     .map((c, i) => ({ c, i }))
     .filter(({ c }) => !c.advisory)
     .filter(({ c }) => regionFilter === 'all' || c.region_type === regionFilter)
+    .filter(({ c }) => confFilter === 'all' || c.confidence === confFilter)
     .sort(
       (a, b) =>
         (TYPE_ORDER[a.c.region_type] ?? 9) - (TYPE_ORDER[b.c.region_type] ?? 9) ||
         a.i - b.i,
     )
+  const confCounts = chunks.reduce((acc, c) => {
+    if (c.advisory) return acc
+    acc[c.confidence] = (acc[c.confidence] ?? 0) + 1
+    return acc
+  }, {})
   const typeCounts = chunks.reduce((acc, c) => {
     if (c.advisory) return acc
     acc[c.region_type] = (acc[c.region_type] ?? 0) + 1
@@ -234,7 +276,83 @@ export default function DocumentDetail() {
             page={focused != null ? (chunks[focused]?.page ?? 1) : 1}
           />
         </div>
+        {status === 'ingested' && !showAllRegions ? (
+          <div className="chunk-list">
+            <div className="panel key-info">
+              <div className="key-info-header">Key information</div>
+              {keyFacts.length > 0 && (
+                <dl className="key-facts">
+                  {keyFacts.map(([label, value]) => (
+                    <div key={label}>
+                      <dt>{label}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              {summaryChunk && (
+                <>
+                  <div className="key-info-sub">
+                    Summary
+                    <Tooltip
+                      label="Written by AI from the drawing image — not text printed on the drawing."
+                      maw={300}
+                      multiline
+                      withArrow
+                    >
+                      <IconSparkles size={13} color="var(--mantine-color-brand-6)" />
+                    </Tooltip>
+                  </div>
+                  <p className="key-info-summary">{summaryChunk.chunk_text}</p>
+                </>
+              )}
+              {titleChunks.length > 0 && (
+                <>
+                  <div className="key-info-sub">Title block</div>
+                  {titleChunks.map(({ c, i }) => (
+                    <p
+                      key={i}
+                      className={`key-info-line${focused === i ? ' focused' : ''}`}
+                      onClick={() => setFocused(i)}
+                    >
+                      {c.chunk_text}
+                    </p>
+                  ))}
+                </>
+              )}
+            </div>
+            <Button variant="default" fullWidth onClick={() => setShowAllRegions(true)}>
+              Show all {reviewableCount} extracted regions
+            </Button>
+          </div>
+        ) : (
         <div className="chunk-list">
+          {status === 'ingested' && (
+            <Button
+              variant="subtle"
+              size="compact-sm"
+              mb="xs"
+              onClick={() => setShowAllRegions(false)}
+            >
+              ← Back to key information
+            </Button>
+          )}
+          <SegmentedControl
+            size="xs"
+            fullWidth
+            mb="xs"
+            value={confFilter}
+            onChange={setConfFilter}
+            data={[
+              { value: 'all', label: 'Any confidence' },
+              ...['low', 'medium', 'high']
+                .filter((l) => confCounts[l])
+                .map((l) => ({
+                  value: l,
+                  label: `${l[0].toUpperCase() + l.slice(1)} (${confCounts[l]})`,
+                })),
+            ]}
+          />
           <SegmentedControl
             size="xs"
             fullWidth
@@ -310,6 +428,7 @@ export default function DocumentDetail() {
             </div>
           ))}
         </div>
+        )}
       </div>
 
       {confirmingDelete && (

@@ -22,6 +22,8 @@ const STATUS_OPTIONS = [
 export default function Documents() {
   const [files, setFiles] = useState(null)
   const [loadError, setLoadError] = useState(null)
+  // documents waiting for a bulk-ingest worker slot (client-side status)
+  const [queuedIds, setQueuedIds] = useState(new Set())
   // Filters live in the URL so they survive navigating to a document and back
   const [searchParams, setSearchParams] = useSearchParams()
   const query = searchParams.get('q') ?? ''
@@ -110,6 +112,10 @@ export default function Documents() {
     setConfirmIngestAll(false)
     setBulkIngesting(true)
     const queue = (files ?? []).filter((f) => f.status === 'extracted')
+    // every document acknowledges the click IMMEDIATELY: those beyond the
+    // worker pool show "Queued" until a worker claims them (server status
+    // then takes over via refresh)
+    setQueuedIds(new Set(queue.map((f) => f.file_id)))
     let ok = 0
     let failed = 0
     const worker = async () => {
@@ -122,6 +128,11 @@ export default function Documents() {
         } catch (e) {
           if (!/already/i.test(e.message)) failed++
         }
+        setQueuedIds((prev) => {
+          const next = new Set(prev)
+          next.delete(f.file_id)
+          return next
+        })
         refresh()
       }
     }
@@ -129,6 +140,7 @@ export default function Documents() {
     setTimeout(refresh, 1200)
     await Promise.all(Array.from({ length: 3 }, worker))
     setBulkIngesting(false)
+    setQueuedIds(new Set())
     refresh()
     if (failed) toast.error(`${ok} added to the knowledge base; ${failed} failed — see the list for details.`)
     else toast.success(`${ok} document${ok === 1 ? '' : 's'} added to the knowledge base.`)
@@ -340,7 +352,13 @@ export default function Documents() {
                     </td>
                     <td className="cell-type">{f.file_type.toUpperCase()}</td>
                     <td>
-                      <StatusBadge status={f.status} />
+                      <StatusBadge
+                        status={
+                          queuedIds.has(f.file_id) && f.status === 'extracted'
+                            ? 'queued'
+                            : f.status
+                        }
+                      />
                     </td>
                     <td className="cell-date" title={new Date(f.created_at).toLocaleString()}>
                       {new Date(f.created_at).toLocaleDateString()}
