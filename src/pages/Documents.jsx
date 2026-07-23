@@ -322,6 +322,7 @@ export default function Documents() {
                             onClick={() => navigate(`/drawings/${f.drawing_id}`)}
                           >
                             {f.dwg_number ?? 'Drawing'}
+                            {f.project_name ? ` · ${f.project_name}` : ''}
                           </Button>
                           {f.auto_assigned && (
                             <span

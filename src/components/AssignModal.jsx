@@ -28,6 +28,9 @@ export default function AssignModal({ file, onClose, onAssigned }) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
+  // the registry drawing number a new drawing will be created with -
+  // prefilled from the file name so the user SEES the label before it exists
+  const [dwgNumber, setDwgNumber] = useState('')
   const [busy, setBusy] = useState(false)
   const toast = useToast()
 
@@ -36,9 +39,17 @@ export default function AssignModal({ file, onClose, onAssigned }) {
       .then(([s, p]) => {
         setSuggestions(s)
         setProjects(p)
+        setDwgNumber(s.parsed?.dwg_candidates?.[0]?.norm ?? '')
       })
       .catch((e) => toast.error(e.message))
   }, [file.file_id])
+
+  // payload fragment for every create-a-drawing path
+  const newDrawing = (projectId) => ({
+    project_id: projectId,
+    ...(dwgNumber.trim() ? { dwg_number: dwgNumber.trim() } : {}),
+  })
+  const drawingLabel = dwgNumber.trim() || 'a new drawing'
 
   async function doAssign(payload, successMessage) {
     setBusy(true)
@@ -150,8 +161,8 @@ export default function AssignModal({ file, onClose, onAssigned }) {
                       loading={busy}
                       onClick={() =>
                         doAssign(
-                          { new_drawing: { project_id: s.project_id } },
-                          `Added to ${s.name} as a new drawing.`,
+                          { new_drawing: newDrawing(s.project_id) },
+                          `Added to ${s.name} as drawing ${drawingLabel}.`,
                         )
                       }
                     >
@@ -170,6 +181,14 @@ export default function AssignModal({ file, onClose, onAssigned }) {
                 drawing will be created in it for this file.
               </Text>
             )}
+
+          <TextInput
+            label="Drawing number"
+            description="Assigning to a project files this document under a drawing in the registry. This is the number that drawing gets — detected from the file name; edit it if it's wrong."
+            placeholder="e.g. 11778-W-59 (left blank: taken from the file name)"
+            value={dwgNumber}
+            onChange={(e) => setDwgNumber(e.currentTarget.value)}
+          />
 
           <Divider label="Or assign manually" labelPosition="center" />
           {!creating && (
@@ -191,8 +210,8 @@ export default function AssignModal({ file, onClose, onAssigned }) {
                 loading={busy}
                 onClick={() =>
                   doAssign(
-                    { new_drawing: { project_id: manualProject } },
-                    'File assigned as a new drawing.',
+                    { new_drawing: newDrawing(manualProject) },
+                    `File assigned as drawing ${drawingLabel}.`,
                   )
                 }
               >
@@ -232,8 +251,8 @@ export default function AssignModal({ file, onClose, onAssigned }) {
                         number: newNumber.trim() || null,
                       })
                       await doAssign(
-                        { new_drawing: { project_id: p.project_id } },
-                        `Created "${p.name}" and assigned the file to it.`,
+                        { new_drawing: newDrawing(p.project_id) },
+                        `Created "${p.name}" and filed this document as drawing ${drawingLabel}.`,
                       )
                     } catch (e) {
                       toast.error(e.message)
