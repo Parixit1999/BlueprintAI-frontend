@@ -72,6 +72,7 @@ export default function DocumentDetail() {
   }
 
   const [regionFilter, setRegionFilter] = useState('all')
+  const [confFilter, setConfFilter] = useState('all')
 
   const reviewing = status === 'extracted'
 
@@ -86,11 +87,17 @@ export default function DocumentDetail() {
     .map((c, i) => ({ c, i }))
     .filter(({ c }) => !c.advisory)
     .filter(({ c }) => regionFilter === 'all' || c.region_type === regionFilter)
+    .filter(({ c }) => confFilter === 'all' || c.confidence === confFilter)
     .sort(
       (a, b) =>
         (TYPE_ORDER[a.c.region_type] ?? 9) - (TYPE_ORDER[b.c.region_type] ?? 9) ||
         a.i - b.i,
     )
+  const confCounts = chunks.reduce((acc, c) => {
+    if (c.advisory) return acc
+    acc[c.confidence] = (acc[c.confidence] ?? 0) + 1
+    return acc
+  }, {})
   const typeCounts = chunks.reduce((acc, c) => {
     if (c.advisory) return acc
     acc[c.region_type] = (acc[c.region_type] ?? 0) + 1
@@ -330,6 +337,22 @@ export default function DocumentDetail() {
               ← Back to key information
             </Button>
           )}
+          <SegmentedControl
+            size="xs"
+            fullWidth
+            mb="xs"
+            value={confFilter}
+            onChange={setConfFilter}
+            data={[
+              { value: 'all', label: 'Any confidence' },
+              ...['low', 'medium', 'high']
+                .filter((l) => confCounts[l])
+                .map((l) => ({
+                  value: l,
+                  label: `${l[0].toUpperCase() + l.slice(1)} (${confCounts[l]})`,
+                })),
+            ]}
+          />
           <SegmentedControl
             size="xs"
             fullWidth
