@@ -59,6 +59,22 @@ export default function DocumentDetail() {
   const keyFacts = []
   if (dwgNumber) keyFacts.push(['Drawing number', dwgNumber])
   if (projectName) keyFacts.push(['Project', projectName])
+
+  // Sheet index: what each sheet's own title block declares. A multi-sheet
+  // PDF can bundle sheets of different drawings - surface that instead of
+  // hiding it in 700 regions.
+  const SHEET_DWG_RE = /DWG\.?\s*NO\.?\s*:?\s*([A-Z0-9][A-Z0-9-]{2,20})/i
+  const SHEET_NO_RE = /SHEET\s*NO\.?\s*:?\s*(\d+\s*(?:OF|THRU)\s*\d+|[A-Z]?\d+(?:\.\d+)?)/i
+  const pageNums = [...new Set(titleChunks.map(({ c }) => c.page ?? 1))].sort((a, b) => a - b)
+  const sheetIndex =
+    pageNums.length > 1
+      ? pageNums.map((p) => {
+          const texts = titleChunks.filter(({ c }) => (c.page ?? 1) === p).map(({ c }) => c.chunk_text)
+          const dwg = texts.map((t) => t.match(SHEET_DWG_RE)).find(Boolean)
+          const sheet = texts.map((t) => t.match(SHEET_NO_RE)).find(Boolean)
+          return { page: p, dwg: dwg?.[1] ?? null, sheet: sheet?.[1] ?? null }
+        })
+      : []
   for (const [label, re] of FACT_PATTERNS) {
     for (const { c } of titleChunks) {
       const m = c.chunk_text.match(re)
@@ -304,6 +320,29 @@ export default function DocumentDetail() {
                     </Tooltip>
                   </div>
                   <p className="key-info-summary">{summaryChunk.chunk_text}</p>
+                </>
+              )}
+              {sheetIndex.length > 0 && (
+                <>
+                  <div className="key-info-sub">Sheet index</div>
+                  <table className="sheet-index">
+                    <thead>
+                      <tr>
+                        <th>Sheet</th>
+                        <th>Drawing no.</th>
+                        <th>Labeled</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sheetIndex.map((s) => (
+                        <tr key={s.page}>
+                          <td>{s.page}</td>
+                          <td>{s.dwg ?? <span className="muted">—</span>}</td>
+                          <td>{s.sheet ?? <span className="muted">—</span>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </>
               )}
               {titleChunks.length > 0 && (
