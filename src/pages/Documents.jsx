@@ -198,9 +198,32 @@ export default function Documents() {
       ) : files === null ? (
         <Loading label="Loading documents…" />
       ) : files.length === 0 ? (
-        <div className="empty-state">
-          <p>No documents yet.</p>
-          <p className="page-sub">Upload a DXF, PDF, or drawing photo to get started.</p>
+        // keep the table frame even when empty - the page reads as the same
+        // screen it will be once documents exist, not a different layout
+        <div className="panel table-panel">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Assignment</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Uploaded</th>
+                <th className="th-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="no-hover">
+                <td colSpan={6} className="empty-note center">
+                  No documents yet — upload a DXF, DWG, RVT, PDF, or drawing photo to get
+                  started.{' '}
+                  <Button variant="subtle" size="compact-sm" onClick={() => navigate('/upload')}>
+                    Upload drawings
+                  </Button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       ) : (
         <>
