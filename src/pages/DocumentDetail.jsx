@@ -89,8 +89,23 @@ export default function DocumentDetail() {
 
   const [regionFilter, setRegionFilter] = useState('all')
   const [confFilter, setConfFilter] = useState('all')
+  // multi-sheet navigation: the viewer shows currentPage; the region list
+  // follows it ('sheet' scope) unless the user widens to all sheets
+  const [currentPage, setCurrentPage] = useState(1)
+  const [sheetScope, setSheetScope] = useState('sheet')
 
   const reviewing = status === 'extracted'
+  const pageCount = Math.max(1, ...chunks.map((c) => c.page ?? 1))
+
+  function goToPage(p) {
+    setCurrentPage(p)
+    setFocused(null)
+  }
+
+  // focusing a region pulls the viewer (and sheet scope) to its sheet
+  useEffect(() => {
+    if (focused != null) setCurrentPage(chunks[focused]?.page ?? 1)
+  }, [focused, chunks])
 
   // Pipeline disclosures (e.g. "converted from DWG") surface as a banner, not
   // review cards - they are not drawing content and are never ingested.
@@ -102,6 +117,10 @@ export default function DocumentDetail() {
   const visibleChunks = chunks
     .map((c, i) => ({ c, i }))
     .filter(({ c }) => !c.advisory)
+    .filter(
+      ({ c }) =>
+        pageCount === 1 || sheetScope === 'all' || (c.page ?? 1) === currentPage,
+    )
     .filter(({ c }) => regionFilter === 'all' || c.region_type === regionFilter)
     .filter(({ c }) => confFilter === 'all' || c.confidence === confFilter)
     .sort(
@@ -289,7 +308,9 @@ export default function DocumentDetail() {
           <DrawingViewer
             fileId={fileId}
             highlightBbox={focused != null ? chunks[focused]?.bbox : null}
-            page={focused != null ? (chunks[focused]?.page ?? 1) : 1}
+            page={focused != null ? (chunks[focused]?.page ?? 1) : currentPage}
+            pageCount={pageCount}
+            onPageChange={goToPage}
           />
         </div>
         {status === 'ingested' && !showAllRegions ? (
@@ -335,7 +356,12 @@ export default function DocumentDetail() {
                     </thead>
                     <tbody>
                       {sheetIndex.map((s) => (
-                        <tr key={s.page}>
+                        <tr
+                          key={s.page}
+                          className={`sheet-index-row${currentPage === s.page ? ' active' : ''}`}
+                          onClick={() => goToPage(s.page)}
+                          title={`View sheet ${s.page}`}
+                        >
                           <td>{s.page}</td>
                           <td>{s.dwg ?? <span className="muted">—</span>}</td>
                           <td>{s.sheet ?? <span className="muted">—</span>}</td>
@@ -375,6 +401,19 @@ export default function DocumentDetail() {
             >
               ← Back to key information
             </Button>
+          )}
+          {pageCount > 1 && (
+            <SegmentedControl
+              size="xs"
+              fullWidth
+              mb="xs"
+              value={sheetScope}
+              onChange={setSheetScope}
+              data={[
+                { value: 'sheet', label: `Sheet ${currentPage} only` },
+                { value: 'all', label: `All ${pageCount} sheets` },
+              ]}
+            />
           )}
           <SegmentedControl
             size="xs"

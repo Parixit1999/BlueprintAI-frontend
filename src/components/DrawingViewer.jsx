@@ -12,7 +12,13 @@ const renderCache = new Map()
  * percentage positions on the image (y is flipped: model space is y-up).
  * Click the drawing (or the expand button) for a full-screen view.
  */
-export default function DrawingViewer({ fileId, highlightBbox, page = 1 }) {
+export default function DrawingViewer({
+  fileId,
+  highlightBbox,
+  page = 1,
+  pageCount = 1,
+  onPageChange,
+}) {
   const cacheKey = `${fileId}:${page}`
   const [render, setRender] = useState(renderCache.get(cacheKey) ?? null)
   const [error, setError] = useState(null)
@@ -60,15 +66,52 @@ export default function DrawingViewer({ fileId, highlightBbox, page = 1 }) {
       .catch((e) => setError(e.message))
   }, [fileId, page, cacheKey])
 
+  // sheet navigation stays visible through loading/error states, so paging
+  // through a multi-sheet document never makes the controls vanish
+  const sheetNav = pageCount > 1 && onPageChange && (
+    <div className="sheet-nav">
+      <ActionIcon
+        variant="default"
+        size="sm"
+        aria-label="Previous sheet"
+        disabled={page <= 1}
+        onClick={() => onPageChange(page - 1)}
+      >
+        ‹
+      </ActionIcon>
+      <span className="sheet-nav-label">
+        Sheet {page} of {pageCount}
+      </span>
+      <ActionIcon
+        variant="default"
+        size="sm"
+        aria-label="Next sheet"
+        disabled={page >= pageCount}
+        onClick={() => onPageChange(page + 1)}
+      >
+        ›
+      </ActionIcon>
+    </div>
+  )
+
   if (error) {
     return (
-      <div className="viewer-error">
-        <p className="error">We couldn’t load this drawing preview.</p>
-        <p className="muted">{error}</p>
-      </div>
+      <>
+        {sheetNav}
+        <div className="viewer-error">
+          <p className="error">We couldn’t load this drawing preview.</p>
+          <p className="muted">{error}</p>
+        </div>
+      </>
     )
   }
-  if (!render) return <Loading label="Rendering drawing…" py="lg" size="sm" />
+  if (!render)
+    return (
+      <>
+        {sheetNav}
+        <Loading label="Rendering drawing…" py="lg" size="sm" />
+      </>
+    )
 
   const [xmin, ymin, xmax, ymax] = render.extents
   let highlight = null
@@ -84,6 +127,7 @@ export default function DrawingViewer({ fileId, highlightBbox, page = 1 }) {
 
   return (
     <>
+      {sheetNav}
       <div
         className="viewer expandable"
         onClick={() => setExpanded(true)}
