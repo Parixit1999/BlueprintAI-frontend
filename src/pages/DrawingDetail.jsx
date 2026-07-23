@@ -34,6 +34,7 @@ export default function DrawingDetail() {
   const { drawingId } = useParams()
   const [drawing, setDrawing] = useState(null)
   const [form, setForm] = useState(null)
+  const [projectSets, setProjectSets] = useState([])
   const [saving, setSaving] = useState(false)
   const [pendingDelete, setPendingDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -54,7 +55,16 @@ export default function DrawingDetail() {
           contract_number: d.contract_number ?? '',
           drawing_date: d.drawing_date ?? '',
           version_note: d.version_note ?? '',
+          set_id: d.set_id ?? null,
         })
+        // sets live under the drawing's project - needed for the Set selector
+        if (d.project_id) {
+          getProject(d.project_id)
+            .then((p) => setProjectSets(p.sets ?? []))
+            .catch(() => setProjectSets([]))
+        } else {
+          setProjectSets([])
+        }
         setLoadError(null)
       })
       .catch((e) => (drawing ? toast.error(e.message) : setLoadError(e.message)))
@@ -74,6 +84,7 @@ export default function DrawingDetail() {
         contract_number: form.contract_number.trim() || null,
         drawing_date: form.drawing_date.trim() || null,
         version_note: form.version_note.trim() || null,
+        set_id: form.set_id || null,
       })
       toast.success('Drawing updated.')
       refresh()
@@ -218,6 +229,23 @@ export default function DrawingDetail() {
                 placeholder='e.g. "as-built revision"'
                 value={form.version_note}
                 onChange={(e) => setForm({ ...form, version_note: e.currentTarget.value })}
+              />
+              <Select
+                label="Drawing set"
+                description={
+                  drawing?.project_id
+                    ? 'Group this drawing with others under a set number'
+                    : 'Assign the drawing to a project first'
+                }
+                placeholder={projectSets.length ? 'No set' : 'No sets in this project yet'}
+                data={projectSets.map((s) => ({
+                  value: s.set_id,
+                  label: s.name ? `${s.set_number} — ${s.name}` : s.set_number,
+                }))}
+                value={form.set_id}
+                onChange={(v) => setForm({ ...form, set_id: v })}
+                disabled={!drawing?.project_id || projectSets.length === 0}
+                clearable
               />
               <Group justify="flex-end">
                 <Button type="submit" loading={saving}>
