@@ -810,6 +810,82 @@ tbody tr.no-hover:hover {
   background: var(--mantine-color-blue-6, #228be6);
 }
 
+/* ---------- Key information (ingested document view) ---------- */
+.key-info {
+  padding: 16px;
+  margin-bottom: 10px;
+}
+
+.key-info-header {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+
+.key-facts {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 14px;
+}
+
+.key-facts > div {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 8px;
+}
+
+.key-facts dt {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  align-self: baseline;
+  padding-top: 2px;
+}
+
+.key-facts dd {
+  margin: 0;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.key-info-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 12px 0 6px;
+}
+
+.key-info-summary {
+  font-size: 13.5px;
+  line-height: 1.55;
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.key-info-line {
+  font-size: 13.5px;
+  margin: 0 0 4px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.key-info-line:hover {
+  background: var(--accent-wash);
+}
+
+.key-info-line.focused {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+
 /* ---------- Confirm dialog ---------- */
 .confirm-message {
   color: var(--ink-2);
