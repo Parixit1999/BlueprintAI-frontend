@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000/api'
 
 // Customer-facing copy: plain language, no server/backend jargon, always a
 // next step. Backend `detail` messages are already written for users and
