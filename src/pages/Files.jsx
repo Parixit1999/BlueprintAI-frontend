@@ -56,6 +56,7 @@ export default function Files() {
   const [renameValue, setRenameValue] = useState('')
   const [moving, setMoving] = useState(null) // {kind, id, name, subtree?}
   const [moveTarget, setMoveTarget] = useState(null)
+  const [moveSearch, setMoveSearch] = useState('')
   const [pendingDelete, setPendingDelete] = useState(null) // folder
   const [deleting, setDeleting] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -182,6 +183,43 @@ export default function Files() {
       else await moveFile(moving.id, target)
       toast.success('Moved.')
       setMoving(null)
+      refresh()
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Create the typed destination on the fly, reusing any path segments that
+  // already exist ("riverside/2022" reuses folder riverside, creates 2022),
+  // then move the item into the deepest one - no leaving the dialog.
+  async function createAndMove() {
+    const segments = moveSearch.split('/').map((s) => s.trim()).filter(Boolean)
+    if (!segments.length) return
+    setBusy(true)
+    try {
+      let parentId = null
+      let known = allFolders
+      for (const name of segments) {
+        const existing = known.find(
+          (f) =>
+            (f.parent_id ?? null) === parentId &&
+            f.name.toLowerCase() === name.toLowerCase(),
+        )
+        if (existing) {
+          parentId = existing.folder_id
+        } else {
+          const created = await createFolder(name, parentId)
+          parentId = created.folder_id
+          known = [...known, created]
+        }
+      }
+      if (moving.kind === 'folder') await moveFolder(moving.id, parentId)
+      else await moveFile(moving.id, parentId)
+      toast.success(`Created “${segments.join(' / ')}” and moved.`)
+      setMoving(null)
+      setMoveSearch('')
       refresh()
     } catch (err) {
       toast.error(err.message)
@@ -478,11 +516,39 @@ export default function Files() {
             data={moveOptions}
             value={moveTarget}
             onChange={setMoveTarget}
+            searchValue={moveSearch}
+            onSearchChange={setMoveSearch}
             filter={filterMoveOptions}
             searchable
-            nothingFoundMessage="No folder matches"
+            nothingFoundMessage={
+              // the open dropdown covers everything below the input, so the
+              // create action must live INSIDE it to be reachable mid-typing
+              <Button
+                variant="subtle"
+                size="compact-sm"
+                fullWidth
+                loading={busy}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={createAndMove}
+              >
+                + Create “{moveSearch.split('/').map((s) => s.trim()).filter(Boolean).join(' / ')}”
+                and move here
+              </Button>
+            }
             comboboxProps={{ transitionProps: { duration: 0 } }}
           />
+          {moveSearch.trim() && (
+            <Button
+              variant="light"
+              size="compact-sm"
+              loading={busy}
+              onClick={createAndMove}
+              styles={{ inner: { justifyContent: 'flex-start' } }}
+            >
+              + Create “{moveSearch.split('/').map((s) => s.trim()).filter(Boolean).join(' / ')}”
+              and move here
+            </Button>
+          )}
           <Group justify="flex-end">
             <Button variant="default" onClick={() => setMoving(null)}>
               Cancel
