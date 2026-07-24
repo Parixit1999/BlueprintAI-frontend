@@ -107,10 +107,16 @@ export default function DrawingDetail() {
       setLinkCandidates(
         project.drawings
           .filter((d) => !linkedIds.has(d.drawing_id))
-          .map((d) => ({
-            value: d.drawing_id,
-            label: `${d.dwg_number ?? 'no DWG #'} — ${d.description ?? ''}`.slice(0, 80),
-          })),
+          .map((d) => {
+            // versions are told apart by date, so show it when present; only
+            // append the separator when there is actually something to show
+            const detail = d.drawing_date || d.description || ''
+            const base = d.dwg_number ?? 'no DWG #'
+            return {
+              value: d.drawing_id,
+              label: (detail ? `${base} — ${detail}` : base).slice(0, 80),
+            }
+          }),
       )
       setLinkTarget(null)
       linkModalCtl.open()
