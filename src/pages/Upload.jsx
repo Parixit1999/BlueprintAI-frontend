@@ -41,6 +41,8 @@ export default function Upload() {
   const uploadFolderId = searchParams.get('folder')
   const scopeDrawingId = searchParams.get('drawing')
   const scopeDrawingName = searchParams.get('drawingName')
+  const scopeProjectId = searchParams.get('project')
+  const scopeProjectName = searchParams.get('projectName')
   // per-item overrides after the user acts on a suggestion / undo
   const [resolved, setResolved] = useState({}) // itemId -> {kind: 'undone'|'assigned', label?}
   const [actingOn, setActingOn] = useState(null)
@@ -92,6 +94,8 @@ export default function Upload() {
     enqueue(files, uploadFolderId, {
       drawingId: scopeDrawingId,
       drawingName: scopeDrawingName,
+      projectId: scopeProjectId,
+      projectName: scopeProjectName,
     })
 
   return (
@@ -101,6 +105,8 @@ export default function Upload() {
         description={
           scopeDrawingId
             ? `Files uploaded here attach directly to drawing ${scopeDrawingName ?? 'you came from'} — no assignment step needed.`
+            : scopeProjectId
+            ? `Files uploaded here are filed into project ${scopeProjectName ?? 'you came from'} as new drawings.`
             : uploadFolderId
               ? 'Files uploaded here land in the selected folder in Files.'
               : 'Add CAD (.dxf, .dwg), Revit models (.rvt), PDFs (vector or scanned), or drawing images (PNG, JPG, TIFF, HEIC...). Drop many files at once, or a .zip archive for bulk import.'
@@ -256,7 +262,9 @@ export default function Upload() {
                               >
                                 {item.autoAssignment.kind === 'new_version'
                                   ? `New version of ${item.autoAssignment.dwg_number} (${item.autoAssignment.of_year} → ${item.autoAssignment.new_year})`
-                                  : `Auto-assigned to ${item.autoAssignment.dwg_number}`}
+                                  : item.autoAssignment.project_name
+                                    ? `Filed into ${item.autoAssignment.project_name}`
+                                    : `Auto-assigned to ${item.autoAssignment.dwg_number}`}
                               </Badge>
                               <Button
                                 variant="subtle"
