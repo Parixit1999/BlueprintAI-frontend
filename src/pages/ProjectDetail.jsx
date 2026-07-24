@@ -16,6 +16,7 @@ import {
   IconChevronDown,
   IconChevronRight,
   IconFilePlus,
+  IconSearch,
   IconPencil,
   IconStack2,
   IconTrash,
