@@ -55,6 +55,9 @@ export default function ProjectDetail() {
   const [saving, setSaving] = useState(false)
   const [dwg, setDwg] = useState({ dwg_number: '', description: '', contract_number: '', drawing_date: '', sheet_count: null, set_id: null })
   const [setForm, setSetForm] = useState({ set_number: '', name: '' })
+  // explorer search: filters drawings by number/description/contract/date
+  // and by their FILES' names; matches auto-expand to show the hit
+  const [query, setQuery] = useState('')
   // file explorer state: which drawings are expanded + in-flight file action
   const [expanded, setExpanded] = useState(new Set())
   const [renamingFile, setRenamingFile] = useState(null) // {file, name}
@@ -63,6 +66,18 @@ export default function ProjectDetail() {
   const [fileBusy, setFileBusy] = useState(false)
   const toast = useToast()
   const navigate = useNavigate()
+
+  function matchesQuery(d) {
+    const q = query.trim().toLowerCase()
+    const own = [d.dwg_number, d.description, d.contract_number, d.drawing_date, d.year]
+      .filter(Boolean)
+      .some((v) => String(v).toLowerCase().includes(q))
+    const inFiles = (d.files ?? []).some((f) => f.filename.toLowerCase().includes(q))
+    return own || inFiles
+  }
+
+  // while searching, matched drawings open themselves so file hits are visible
+  const isExpanded = (drawingId) => query.trim() !== '' || expanded.has(drawingId)
 
   function toggleExpand(drawingId) {
     setExpanded((prev) => {
@@ -278,6 +293,13 @@ export default function ProjectDetail() {
       {/* The project IS the file system: Set -> Drawing -> File hierarchy,
           every level expandable, file operations inline. */}
       <Group mb="sm" justify="space-between">
+        <TextInput
+          placeholder="Search drawings and files in this project…"
+          value={query}
+          onChange={(e) => setQuery(e.currentTarget.value)}
+          w={320}
+          size="sm"
+        />
         <Text size="sm" c="dimmed">
           {project.drawings.length} drawing{project.drawings.length === 1 ? '' : 's'} ·{' '}
           {project.drawings.reduce((n, d) => n + (d.files?.length ?? 0), 0)} file
@@ -314,7 +336,13 @@ export default function ProjectDetail() {
             drawings: project.drawings.filter((d) => !d.set_id),
           },
         ]
-          .filter((g) => g.set || g.drawings.length > 0)
+          .map((g) => ({
+            ...g,
+            drawings: query.trim() ? g.drawings.filter(matchesQuery) : g.drawings,
+          }))
+          .filter((g) =>
+            query.trim() ? g.drawings.length > 0 : g.set || g.drawings.length > 0,
+          )
           .map((group) => (
             <div key={group.key} className="explorer-section panel">
               <div className="explorer-section-head">
@@ -349,7 +377,7 @@ export default function ProjectDetail() {
               {group.drawings.map((d) => (
                 <div key={d.drawing_id} className="explorer-drawing">
                   <div className="explorer-drawing-row" onClick={() => toggleExpand(d.drawing_id)}>
-                    {expanded.has(d.drawing_id) ? (
+                    {isExpanded(d.drawing_id) ? (
                       <IconChevronDown size={16} className="muted" />
                     ) : (
                       <IconChevronRight size={16} className="muted" />
@@ -373,7 +401,7 @@ export default function ProjectDetail() {
                       Details
                     </Button>
                   </div>
-                  {expanded.has(d.drawing_id) && (
+                  {isExpanded(d.drawing_id) && (
                     <div className="explorer-files">
                       {(d.files ?? []).length === 0 && (
                         <p className="empty-note">No files attached to this drawing.</p>
