@@ -58,6 +58,7 @@ export default function ProjectDetail() {
   // explorer search: filters drawings by number/description/contract/date
   // and by their FILES' names; matches auto-expand to show the hit
   const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
   // file explorer state: which drawings are expanded + in-flight file action
   const [expanded, setExpanded] = useState(new Set())
   const [renamingFile, setRenamingFile] = useState(null) // {file, name}
@@ -76,8 +77,13 @@ export default function ProjectDetail() {
     return own || inFiles
   }
 
-  // while searching, matched drawings open themselves so file hits are visible
-  const isExpanded = (drawingId) => query.trim() !== '' || expanded.has(drawingId)
+  const matchesStatus = (d) =>
+    statusFilter === 'all' || (d.files ?? []).some((f) => f.status === statusFilter)
+
+  const filterActive = query.trim() !== '' || statusFilter !== 'all'
+
+  // filtering opens matched drawings so the hits are visible
+  const isExpanded = (drawingId) => filterActive || expanded.has(drawingId)
 
   function toggleExpand(drawingId) {
     setExpanded((prev) => {
@@ -273,7 +279,11 @@ export default function ProjectDetail() {
             <Button
               variant="default"
               leftSection={<IconUpload size={16} />}
-              onClick={() => navigate('/upload')}
+              onClick={() =>
+                navigate(
+                  `/upload?project=${projectId}&projectName=${encodeURIComponent(project.name)}`,
+                )
+              }
             >
               Upload files
             </Button>
@@ -299,6 +309,19 @@ export default function ProjectDetail() {
           onChange={(e) => setQuery(e.currentTarget.value)}
           w={320}
           size="sm"
+        />
+        <Select
+          size="sm"
+          w={170}
+          value={statusFilter}
+          onChange={(v) => setStatusFilter(v ?? 'all')}
+          data={[
+            { value: 'all', label: 'All statuses' },
+            { value: 'extracted', label: 'Needs review' },
+            { value: 'ingesting', label: 'Processing' },
+            { value: 'ingested', label: 'Ingested' },
+            { value: 'failed', label: 'Failed' },
+          ]}
         />
         <Text size="sm" c="dimmed" ml="auto">
           {project.drawings.length} drawing{project.drawings.length === 1 ? '' : 's'} ·{' '}
@@ -338,10 +361,12 @@ export default function ProjectDetail() {
         ]
           .map((g) => ({
             ...g,
-            drawings: query.trim() ? g.drawings.filter(matchesQuery) : g.drawings,
+            drawings: g.drawings
+              .filter((d) => (query.trim() ? matchesQuery(d) : true))
+              .filter(matchesStatus),
           }))
           .filter((g) =>
-            query.trim() ? g.drawings.length > 0 : g.set || g.drawings.length > 0,
+            filterActive ? g.drawings.length > 0 : g.set || g.drawings.length > 0,
           )
           .map((group) => (
             <div key={group.key} className="explorer-section panel">
@@ -382,7 +407,16 @@ export default function ProjectDetail() {
                     ) : (
                       <IconChevronRight size={16} className="muted" />
                     )}
-                    <span className="explorer-dwg">{d.dwg_number ?? 'no DWG #'}</span>
+                    <span
+                      className="explorer-dwg explorer-link"
+                      title="Open drawing details"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        navigate(`/drawings/${d.drawing_id}`)
+                      }}
+                    >
+                      {d.dwg_number ?? 'no DWG #'}
+                    </span>
                     <span className="explorer-desc">
                       {d.description ?? ''}
                     </span>
@@ -406,9 +440,17 @@ export default function ProjectDetail() {
                       {(d.files ?? []).length === 0 && (
                         <p className="empty-note">No files attached to this drawing.</p>
                       )}
-                      {(d.files ?? []).map((f) => (
+                      {(d.files ?? [])
+                        .filter((f) => statusFilter === 'all' || f.status === statusFilter)
+                        .map((f) => (
                         <div key={f.file_id} className="explorer-file-row">
-                          <span className="explorer-filename">{f.filename}</span>
+                          <span
+                            className="explorer-filename explorer-link"
+                            title="Open document"
+                            onClick={() => navigate(`/documents/${f.file_id}`)}
+                          >
+                            {f.filename}
+                          </span>
                           {f.sheet_number && (
                             <span className="muted">Sheet {f.sheet_number}</span>
                           )}

@@ -11,6 +11,7 @@ import { useToast } from '../components/Toast'
 
 export default function Projects() {
   const [unassigned, setUnassigned] = useState(0)
+  const [query, setQuery] = useState('')
   const [projects, setProjects] = useState(null)
   const [loadError, setLoadError] = useState(null)
   const [opened, { open, close }] = useDisclosure(false)
@@ -75,6 +76,16 @@ export default function Projects() {
         }
       />
 
+      {(projects?.length ?? 0) > 3 && (
+        <input
+          className="search"
+          style={{ maxWidth: 320, marginBottom: 12 }}
+          placeholder="Search projects…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      )}
+
       {unassigned > 0 && (
         <div className="notice">
           <span className="notice-icon">!</span>
@@ -114,7 +125,15 @@ export default function Projects() {
               </tr>
             </thead>
             <tbody>
-              {projects.map((p) => (
+              {projects
+                .filter((p) => {
+                  const q = query.trim().toLowerCase()
+                  if (!q) return true
+                  return [p.name, p.number, p.description]
+                    .filter(Boolean)
+                    .some((v) => String(v).toLowerCase().includes(q))
+                })
+                .map((p) => (
                 <tr key={p.project_id} onClick={() => navigate(`/projects/${p.project_id}`)}>
                   <td className="cell-name">
                     <div className="name-cell">
