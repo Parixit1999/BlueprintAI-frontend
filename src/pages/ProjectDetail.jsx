@@ -4,8 +4,8 @@ import {
   Group,
   Modal,
   NumberInput,
+  Select,
   Stack,
-  Tabs,
   Text,
   TextInput,
   Textarea,
@@ -13,6 +13,8 @@ import {
 import { useDisclosure } from '@mantine/hooks'
 import {
   IconArrowLeft,
+  IconChevronDown,
+  IconChevronRight,
   IconFilePlus,
   IconPencil,
   IconStack2,
@@ -22,13 +24,18 @@ import {
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
+  assignFile,
   createDrawing,
   createSet,
+  deleteFile,
   deleteProject,
   deleteSet,
   getProject,
+  renameFile,
+  unassignFile,
   updateProject,
 } from '../api'
+import { StatusBadge } from '../components/Badges'
 import ConfirmDialog from '../components/ConfirmDialog'
 import ErrorState from '../components/ErrorState'
 import Loading from '../components/Loading'
@@ -48,8 +55,74 @@ export default function ProjectDetail() {
   const [saving, setSaving] = useState(false)
   const [dwg, setDwg] = useState({ dwg_number: '', description: '', contract_number: '', drawing_date: '', sheet_count: null, set_id: null })
   const [setForm, setSetForm] = useState({ set_number: '', name: '' })
+  // file explorer state: which drawings are expanded + in-flight file action
+  const [expanded, setExpanded] = useState(new Set())
+  const [renamingFile, setRenamingFile] = useState(null) // {file, name}
+  const [movingFile, setMovingFile] = useState(null) // {file, target}
+  const [deletingFile, setDeletingFile] = useState(null) // file
+  const [fileBusy, setFileBusy] = useState(false)
   const toast = useToast()
   const navigate = useNavigate()
+
+  function toggleExpand(drawingId) {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      next.has(drawingId) ? next.delete(drawingId) : next.add(drawingId)
+      return next
+    })
+  }
+
+  async function handleRenameFile() {
+    setFileBusy(true)
+    try {
+      await renameFile(renamingFile.file.file_id, renamingFile.name.trim())
+      toast.success('File renamed.')
+      setRenamingFile(null)
+      refresh()
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      setFileBusy(false)
+    }
+  }
+
+  async function handleMoveFile() {
+    setFileBusy(true)
+    try {
+      await assignFile(movingFile.file.file_id, { drawing_id: movingFile.target })
+      toast.success('File moved.')
+      setMovingFile(null)
+      refresh()
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      setFileBusy(false)
+    }
+  }
+
+  async function handleDetachFile(file) {
+    try {
+      await unassignFile(file.file_id)
+      toast.success('File detached — find it under Documents to reassign.')
+      refresh()
+    } catch (e) {
+      toast.error(e.message)
+    }
+  }
+
+  async function handleDeleteFile() {
+    setFileBusy(true)
+    try {
+      await deleteFile(deletingFile.file_id)
+      toast.success('File deleted.')
+      setDeletingFile(null)
+      refresh()
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      setFileBusy(false)
+    }
+  }
 
   function refresh() {
     return getProject(projectId)
@@ -202,112 +275,237 @@ export default function ProjectDetail() {
         }
       />
 
-      <Tabs defaultValue="drawings">
-        <Tabs.List mb="md">
-          <Tabs.Tab value="drawings">Drawings ({project.drawings.length})</Tabs.Tab>
-          <Tabs.Tab value="sets">Sets ({project.sets.length})</Tabs.Tab>
-        </Tabs.List>
+      {/* The project IS the file system: Set -> Drawing -> File hierarchy,
+          every level expandable, file operations inline. */}
+      <Group mb="sm" justify="space-between">
+        <Text size="sm" c="dimmed">
+          {project.drawings.length} drawing{project.drawings.length === 1 ? '' : 's'} ·{' '}
+          {project.drawings.reduce((n, d) => n + (d.files?.length ?? 0), 0)} file
+          {project.drawings.reduce((n, d) => n + (d.files?.length ?? 0), 0) === 1 ? '' : 's'}
+        </Text>
+        <Button
+          variant="default"
+          size="xs"
+          leftSection={<IconStack2 size={15} />}
+          onClick={setModalCtl.open}
+        >
+          New set
+        </Button>
+      </Group>
 
-        <Tabs.Panel value="drawings">
-          {project.drawings.length === 0 ? (
-            <div className="empty-state">
-              <p>No drawings in this project yet.</p>
-              <p className="page-sub">
-                Add a drawing manually, or upload files — they can be assigned here with
-                automatic name matching.
-              </p>
+      {project.drawings.length === 0 && project.sets.length === 0 ? (
+        <div className="empty-state">
+          <p>No drawings in this project yet.</p>
+          <p className="page-sub">
+            Add a drawing manually, or upload files — they can be assigned here with
+            automatic name matching.
+          </p>
+        </div>
+      ) : (
+        [
+          ...project.sets.map((set) => ({
+            key: set.set_id,
+            set,
+            drawings: project.drawings.filter((d) => d.set_id === set.set_id),
+          })),
+          {
+            key: 'standalone',
+            set: null,
+            drawings: project.drawings.filter((d) => !d.set_id),
+          },
+        ]
+          .filter((g) => g.set || g.drawings.length > 0)
+          .map((group) => (
+            <div key={group.key} className="explorer-section panel">
+              <div className="explorer-section-head">
+                {group.set ? (
+                  <>
+                    <Badge variant="light">{group.set.set_number}</Badge>
+                    <span className="explorer-section-name">
+                      {group.set.name ?? 'Drawing set'}
+                    </span>
+                    <span className="muted">
+                      {group.drawings.length} drawing{group.drawings.length === 1 ? '' : 's'}
+                    </span>
+                    <Button
+                      variant="subtle"
+                      color="red"
+                      size="compact-xs"
+                      ml="auto"
+                      onClick={() => handleDeleteSet(group.set.set_id)}
+                    >
+                      Delete set
+                    </Button>
+                  </>
+                ) : (
+                  <span className="explorer-section-name">Standalone drawings</span>
+                )}
+              </div>
+              {group.drawings.length === 0 && (
+                <p className="empty-note">
+                  Empty set — assign drawings to it from their drawing page.
+                </p>
+              )}
+              {group.drawings.map((d) => (
+                <div key={d.drawing_id} className="explorer-drawing">
+                  <div className="explorer-drawing-row" onClick={() => toggleExpand(d.drawing_id)}>
+                    {expanded.has(d.drawing_id) ? (
+                      <IconChevronDown size={16} className="muted" />
+                    ) : (
+                      <IconChevronRight size={16} className="muted" />
+                    )}
+                    <span className="explorer-dwg">{d.dwg_number ?? 'no DWG #'}</span>
+                    <span className="explorer-desc">
+                      {d.description ?? ''}
+                    </span>
+                    <span className="muted">{d.drawing_date ?? d.year ?? ''}</span>
+                    <Badge variant="light" color={d.files?.length ? 'brand' : 'gray'}>
+                      {d.files?.length ?? 0} file{(d.files?.length ?? 0) === 1 ? '' : 's'}
+                    </Badge>
+                    <Button
+                      variant="subtle"
+                      size="compact-xs"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        navigate(`/drawings/${d.drawing_id}`)
+                      }}
+                    >
+                      Details
+                    </Button>
+                  </div>
+                  {expanded.has(d.drawing_id) && (
+                    <div className="explorer-files">
+                      {(d.files ?? []).length === 0 && (
+                        <p className="empty-note">No files attached to this drawing.</p>
+                      )}
+                      {(d.files ?? []).map((f) => (
+                        <div key={f.file_id} className="explorer-file-row">
+                          <span className="explorer-filename">{f.filename}</span>
+                          {f.sheet_number && (
+                            <span className="muted">Sheet {f.sheet_number}</span>
+                          )}
+                          <StatusBadge status={f.status} />
+                          <span className="explorer-file-actions">
+                            <Button
+                              variant="subtle"
+                              size="compact-xs"
+                              onClick={() => navigate(`/documents/${f.file_id}`)}
+                            >
+                              View
+                            </Button>
+                            <Button
+                              variant="subtle"
+                              size="compact-xs"
+                              onClick={() =>
+                                setRenamingFile({ file: f, name: f.filename })
+                              }
+                            >
+                              Rename
+                            </Button>
+                            <Button
+                              variant="subtle"
+                              size="compact-xs"
+                              onClick={() => setMovingFile({ file: f, target: null })}
+                            >
+                              Move
+                            </Button>
+                            <Button
+                              variant="subtle"
+                              size="compact-xs"
+                              onClick={() => handleDetachFile(f)}
+                            >
+                              Detach
+                            </Button>
+                            <Button
+                              variant="subtle"
+                              color="red"
+                              size="compact-xs"
+                              onClick={() => setDeletingFile(f)}
+                            >
+                              Delete
+                            </Button>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-          ) : (
-            <div className="panel table-panel">
-              <table>
-                <thead>
-                  <tr>
-                    <th>DWG #</th>
-                    <th>Description</th>
-                    <th>Contract #</th>
-                    <th>Date</th>
-                    <th>Set</th>
-                    <th>Sheets</th>
-                    <th>Files</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {project.drawings.map((d) => (
-                    <tr key={d.drawing_id} onClick={() => navigate(`/drawings/${d.drawing_id}`)}>
-                      <td className="cell-name">{d.dwg_number ?? '—'}</td>
-                      <td>
-                        <Text size="sm" truncate maw={380}>
-                          {d.description ?? '—'}
-                        </Text>
-                      </td>
-                      <td>{d.contract_number ?? '—'}</td>
-                      <td>{d.drawing_date ?? d.year ?? '—'}</td>
-                      <td>{d.set_number ? <Badge variant="light">{d.set_number}</Badge> : '—'}</td>
-                      <td>{d.sheet_count ?? '—'}</td>
-                      <td>{d.file_count}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Tabs.Panel>
+          ))
+      )}
 
-        <Tabs.Panel value="sets">
-          <Group mb="sm">
-            <Button
-              variant="default"
-              size="xs"
-              leftSection={<IconStack2 size={15} />}
-              onClick={setModalCtl.open}
-            >
-              New set
-            </Button>
-          </Group>
-          {project.sets.length === 0 ? (
-            <div className="empty-state">
-              <p>No drawing sets.</p>
-              <p className="page-sub">
-                Sets group multiple drawings that belong together (like the book's Set #
-                column, e.g. "12A").
-              </p>
-            </div>
-          ) : (
-            <div className="panel table-panel">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Set #</th>
-                    <th>Name</th>
-                    <th>Drawings</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {project.sets.map((s) => (
-                    <tr key={s.set_id} className="no-hover">
-                      <td className="cell-name">{s.set_number}</td>
-                      <td>{s.name ?? '—'}</td>
-                      <td>{s.drawing_count}</td>
-                      <td className="cell-action">
-                        <Button
-                          variant="subtle"
-                          color="red"
-                          size="compact-sm"
-                          leftSection={<IconTrash size={14} />}
-                          onClick={() => handleDeleteSet(s.set_id)}
-                        >
-                          Delete
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Tabs.Panel>
-      </Tabs>
+      <Modal
+        opened={!!renamingFile}
+        onClose={() => setRenamingFile(null)}
+        title="Rename file"
+        centered
+      >
+        {renamingFile && (
+          <Stack gap="sm">
+            <TextInput
+              value={renamingFile.name}
+              onChange={(e) =>
+                setRenamingFile({ ...renamingFile, name: e.currentTarget.value })
+              }
+              data-autofocus
+            />
+            <Group justify="flex-end">
+              <Button variant="default" onClick={() => setRenamingFile(null)}>
+                Cancel
+              </Button>
+              <Button loading={fileBusy} onClick={handleRenameFile}>
+                Rename
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
+
+      <Modal
+        opened={!!movingFile}
+        onClose={() => setMovingFile(null)}
+        title={movingFile ? `Move "${movingFile.file.filename}"` : ''}
+        centered
+      >
+        {movingFile && (
+          <Stack gap="sm">
+            <Select
+              label="Move to drawing"
+              placeholder="Choose a drawing…"
+              searchable
+              data={project.drawings
+                .filter((d) => d.drawing_id !== movingFile.file.drawing_id)
+                .map((d) => ({
+                  value: d.drawing_id,
+                  label: `${d.dwg_number ?? 'no DWG #'}${d.description ? ` — ${d.description}` : ''}`.slice(0, 70),
+                }))}
+              value={movingFile.target}
+              onChange={(v) => setMovingFile({ ...movingFile, target: v })}
+            />
+            <Group justify="flex-end">
+              <Button variant="default" onClick={() => setMovingFile(null)}>
+                Cancel
+              </Button>
+              <Button loading={fileBusy} disabled={!movingFile.target} onClick={handleMoveFile}>
+                Move
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
+
+      {deletingFile && (
+        <ConfirmDialog
+          title="Delete file?"
+          message={`"${deletingFile.filename}" and its extracted regions will be permanently removed. This cannot be undone.`}
+          confirmLabel="Delete"
+          danger
+          busy={fileBusy}
+          onConfirm={handleDeleteFile}
+          onCancel={() => setDeletingFile(null)}
+        />
+      )}
 
       <Modal opened={drawingModal} onClose={drawingModalCtl.close} title="Add drawing" centered>
         <form onSubmit={handleCreateDrawing}>
