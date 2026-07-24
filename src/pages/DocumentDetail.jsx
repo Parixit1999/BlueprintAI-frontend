@@ -319,7 +319,11 @@ export default function DocumentDetail() {
         <div className="panel viewer-panel">
           <DrawingViewer
             fileId={fileId}
-            highlightBbox={focused != null ? chunks[focused]?.bbox : null}
+            highlightBbox={
+              focused != null && chunks[focused]?.bbox
+                ? [chunks[focused].bbox, ...(chunks[focused].extra_bboxes ?? [])]
+                : null
+            }
             page={focused != null ? (chunks[focused]?.page ?? 1) : currentPage}
             pageCount={pageCount}
             onPageChange={goToPage}
