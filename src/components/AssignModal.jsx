@@ -8,6 +8,7 @@ import {
   Stack,
   Text,
   TextInput,
+  Tooltip,
 } from '@mantine/core'
 import { IconFile, IconFolder, IconFolderPlus, IconSparkles } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
@@ -71,6 +72,71 @@ export default function AssignModal({ file, onClose, onAssigned }) {
         <Loading label="Analyzing file name…" py="lg" size="sm" />
       ) : (
         <Stack gap="md">
+          {suggestions.version_suggestions?.length > 0 && (
+            <div>
+              <Group gap={6} mb={6}>
+                <IconSparkles size={16} color="var(--mantine-color-yellow-7)" />
+                <Text size="sm" fw={600}>
+                  Looks like a new version
+                </Text>
+                <Tooltip
+                  label="The drawing number matches an existing registry entry, but the year (and content analysis) say this file is a different iteration. Accepting creates a linked version — the existing record is untouched."
+                  maw={320}
+                  multiline
+                  withArrow
+                >
+                  <Badge variant="light" color="yellow" size="sm">
+                    AI
+                  </Badge>
+                </Tooltip>
+              </Group>
+              <Stack gap={6}>
+                {suggestions.version_suggestions.map((v) => (
+                  <Group
+                    key={v.drawing_id}
+                    justify="space-between"
+                    wrap="nowrap"
+                    px="sm"
+                    py={8}
+                    style={{
+                      border: '1px solid var(--mantine-color-yellow-4)',
+                      background: 'var(--mantine-color-yellow-0)',
+                      borderRadius: 8,
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <Group gap="xs" wrap="nowrap">
+                        <IconFile size={15} />
+                        <Text size="sm" fw={500} truncate>
+                          {v.dwg_number} · {v.new_year} — new iteration of the{' '}
+                          {v.existing_year} version
+                          {v.project_name ? ` · ${v.project_name}` : ''}
+                        </Text>
+                      </Group>
+                      <Text size="xs" c="dimmed" truncate>
+                        {v.reason}
+                      </Text>
+                    </div>
+                    <Button
+                      size="compact-sm"
+                      color="yellow"
+                      variant="filled"
+                      loading={busy}
+                      onClick={() =>
+                        doAssign(
+                          { version_of: v.drawing_id },
+                          `Added as the ${v.new_year} version of ${v.dwg_number}.`,
+                        )
+                      }
+                    >
+                      Add as new version
+                    </Button>
+                  </Group>
+                ))}
+              </Stack>
+            </div>
+          )}
+
           {suggestions.drawing_suggestions.length > 0 && (
             <div>
               <Group gap={6} mb={6}>

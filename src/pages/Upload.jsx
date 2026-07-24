@@ -249,8 +249,14 @@ export default function Upload() {
                         if (item.autoAssignment) {
                           return (
                             <Group gap="xs" mt={4}>
-                              <Badge variant="light" color="teal" size="sm">
-                                Auto-assigned to {item.autoAssignment.dwg_number}
+                              <Badge
+                                variant="light"
+                                color={item.autoAssignment.kind === 'new_version' ? 'yellow' : 'teal'}
+                                size="sm"
+                              >
+                                {item.autoAssignment.kind === 'new_version'
+                                  ? `New version of ${item.autoAssignment.dwg_number} (${item.autoAssignment.of_year} → ${item.autoAssignment.new_year})`
+                                  : `Auto-assigned to ${item.autoAssignment.dwg_number}`}
                               </Badge>
                               <Button
                                 variant="subtle"

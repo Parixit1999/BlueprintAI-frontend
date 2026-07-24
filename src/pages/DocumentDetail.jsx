@@ -125,7 +125,7 @@ export default function DocumentDetail() {
 
   // Title blocks carry the identifying facts, so they lead; the original
   // extraction index (i) stays attached because edits/rejections key on it.
-  const TYPE_ORDER = { summary: 0, title_block: 1, bom: 2, dimension: 3, note: 4 }
+  const TYPE_ORDER = { summary: 0, title_block: 1, component: 2, bom: 3, dimension: 4, note: 5 }
   const visibleChunks = chunks
     .map((c, i) => ({ c, i }))
     .filter(({ c }) => !c.advisory)
@@ -319,7 +319,11 @@ export default function DocumentDetail() {
         <div className="panel viewer-panel">
           <DrawingViewer
             fileId={fileId}
-            highlightBbox={focused != null ? chunks[focused]?.bbox : null}
+            highlightBbox={
+              focused != null && chunks[focused]?.bbox
+                ? [chunks[focused].bbox, ...(chunks[focused].extra_bboxes ?? [])]
+                : null
+            }
             page={focused != null ? (chunks[focused]?.page ?? 1) : currentPage}
             pageCount={pageCount}
             onPageChange={goToPage}
@@ -469,7 +473,7 @@ export default function DocumentDetail() {
             onChange={setRegionFilter}
             data={[
               { value: 'all', label: `All (${reviewableCount})` },
-              ...['summary', 'title_block', 'bom', 'dimension', 'note']
+              ...['summary', 'title_block', 'component', 'bom', 'dimension', 'note']
                 .filter((t) => typeCounts[t])
                 .map((t) => ({
                   value: t,

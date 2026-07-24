@@ -114,16 +114,19 @@ export default function DrawingViewer({
     )
 
   const [xmin, ymin, xmax, ymax] = render.extents
-  let highlight = null
-  if (highlightBbox) {
-    const [x1, y1, x2, y2] = highlightBbox
-    highlight = {
-      left: `${((x1 - xmin) / (xmax - xmin)) * 100}%`,
-      top: `${((ymax - y2) / (ymax - ymin)) * 100}%`,
-      width: `${((x2 - x1) / (xmax - xmin)) * 100}%`,
-      height: `${((y2 - y1) / (ymax - ymin)) * 100}%`,
-    }
-  }
+  // one region may have many locations (component groups highlight every
+  // instance); accept a single bbox or a list
+  const bboxes = highlightBbox
+    ? Array.isArray(highlightBbox[0])
+      ? highlightBbox
+      : [highlightBbox]
+    : []
+  const highlights = bboxes.map(([x1, y1, x2, y2]) => ({
+    left: `${((x1 - xmin) / (xmax - xmin)) * 100}%`,
+    top: `${((ymax - y2) / (ymax - ymin)) * 100}%`,
+    width: `${((x2 - x1) / (xmax - xmin)) * 100}%`,
+    height: `${((y2 - y1) / (ymax - ymin)) * 100}%`,
+  }))
 
   return (
     <>
@@ -134,7 +137,9 @@ export default function DrawingViewer({
         title="Click to view full screen"
       >
         <img src={render.url} alt="Drawing render" />
-        {highlight && <div className="viewer-highlight" style={highlight} />}
+        {highlights.map((h, i) => (
+          <div key={i} className="viewer-highlight" style={h} />
+        ))}
         <ActionIcon
           className="viewer-expand"
           variant="default"
@@ -188,7 +193,9 @@ export default function DrawingViewer({
             style={{ width: zoom === 'fit' ? '100%' : `${zoom * 100}%` }}
           >
             <img src={render.url} alt="Drawing render, full screen" draggable={false} />
-            {highlight && <div className="viewer-highlight" style={highlight} />}
+            {highlights.map((h, i) => (
+          <div key={i} className="viewer-highlight" style={h} />
+        ))}
           </div>
         </div>
       </Modal>
