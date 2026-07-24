@@ -27,6 +27,22 @@ import DrawingViewer from '../components/DrawingViewer'
 import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 
+
+// "2m ago" / "3h ago" / "yesterday" / "Jul 22" - compact session recency
+function timeAgo(iso) {
+  if (!iso) return ''
+  const then = new Date(iso)
+  const mins = Math.floor((Date.now() - then.getTime()) / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days === 1) return 'yesterday'
+  if (days < 7) return `${days}d ago`
+  return then.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
 function SessionRow({ session, active, renaming, onOpen, onStartRename, onSaveRename, onDelete }) {
   const [value, setValue] = useState(session.title)
 
@@ -57,7 +73,12 @@ function SessionRow({ session, active, renaming, onOpen, onStartRename, onSaveRe
     <div className={active ? 'session-item active' : 'session-item'}>
       <button className="session-open" onClick={() => onOpen(session.session_id)}>
         <span className="session-title">{session.title}</span>
-        <span className="session-meta">{session.message_count} messages</span>
+        <span
+          className="session-meta"
+          title={new Date(session.updated_at ?? session.created_at).toLocaleString()}
+        >
+          {session.message_count} messages · {timeAgo(session.updated_at ?? session.created_at)}
+        </span>
       </button>
       <div className="session-actions">
         <ActionIcon
@@ -496,9 +517,20 @@ export default function Chat() {
           {messages.map((m) =>
             m.role === 'user' ? (
               <div key={m.message_id} className="msg msg-user">
-                <div className="msg-bubble">
+                <div
+                  className="msg-bubble"
+                  title={m.created_at ? new Date(m.created_at).toLocaleString() : undefined}
+                >
                   <p>{m.content}</p>
                 </div>
+                {m.created_at && (
+                  <span className="msg-time">
+                    {new Date(m.created_at).toLocaleTimeString(undefined, {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                )}
               </div>
             ) : (
               <AssistantMessage

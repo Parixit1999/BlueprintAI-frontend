@@ -1929,3 +1929,15 @@ tbody tr.no-hover:hover {
   font-size: 13px;
   font-style: italic;
 }
+
+/* tiny message timestamps - present but never shouting */
+.msg-time {
+  display: block;
+  font-size: 10.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.msg-user .msg-time {
+  text-align: right;
+}
