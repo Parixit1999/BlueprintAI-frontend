@@ -1,6 +1,6 @@
 const CONFIDENCE_LABEL = { high: 'High', medium: 'Medium', low: 'Low' }
 const STATUS_LABEL = {
-  uploaded: 'Uploaded',
+  uploaded: 'Processing upload',
   extracted: 'Needs review',
   ingesting: 'Processing',
   queued: 'Queued', // client-side: waiting for a bulk-ingest worker

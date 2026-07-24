@@ -152,19 +152,29 @@ export default function DocumentDetail() {
   }, {})
   const reviewableCount = chunks.filter((c) => !c.advisory).length
   const ingesting = status === 'ingesting'
+  const extracting = status === 'uploaded'
 
-  // Ingestion embeds every region (minutes for dense sheets). While it runs,
-  // poll so the page flips to the finished state on its own - including when
-  // the user navigated away mid-ingest and came back.
+  // Two background phases poll: ingestion (embedding regions) and extraction
+  // (upload/re-extract processing server-side). When extraction finishes the
+  // fresh regions arrive with it, so reload the whole document then.
   useEffect(() => {
-    if (!ingesting) return
+    if (!ingesting && !extracting) return
     const timer = setInterval(() => {
       getExtraction(fileId)
-        .then((res) => setStatus(res.status))
+        .then((res) => {
+          if (extracting && res.status !== 'uploaded') {
+            setChunks(res.chunks)
+            setIsDrawing(res.is_drawing ?? null)
+            setDwgNumber(res.dwg_number ?? null)
+            setProjectName(res.project_name ?? null)
+          }
+          setStatus(res.status)
+          if (res.status === 'failed' && res.error) toast.error(res.error)
+        })
         .catch(() => {})
     }, 4000)
     return () => clearInterval(timer)
-  }, [ingesting, fileId])
+  }, [ingesting, extracting, fileId])
 
   function toggleReject(i) {
     const next = new Set(rejected)
@@ -201,15 +211,15 @@ export default function DocumentDetail() {
   async function handleReextract() {
     setReextracting(true)
     try {
-      const res = await reextractFile(fileId)
-      setChunks(res.chunks)
-      setStatus('extracted')
+      await reextractFile(fileId)
+      // extraction now runs server-side in the background; the polling
+      // effect below flips this page to review mode when regions land
+      setStatus('uploaded')
+      setChunks([])
       setEdits({})
       setRejected(new Set())
       setFocused(null)
-      toast.success(
-        `Re-read the drawing: ${res.chunks.length} regions found. Review and confirm to update the knowledge base.`,
-      )
+      toast.success('Re-reading the drawing in the background — this page will update itself.')
     } catch (e) {
       toast.error(e.message)
     } finally {
