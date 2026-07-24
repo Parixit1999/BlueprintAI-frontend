@@ -292,7 +292,7 @@ export default function ProjectDetail() {
 
       {/* The project IS the file system: Set -> Drawing -> File hierarchy,
           every level expandable, file operations inline. */}
-      <Group mb="sm" justify="space-between">
+      <Group mb="sm" gap="sm">
         <TextInput
           placeholder="Search drawings and files in this project…"
           value={query}
@@ -300,14 +300,14 @@ export default function ProjectDetail() {
           w={320}
           size="sm"
         />
-        <Text size="sm" c="dimmed">
+        <Text size="sm" c="dimmed" ml="auto">
           {project.drawings.length} drawing{project.drawings.length === 1 ? '' : 's'} ·{' '}
           {project.drawings.reduce((n, d) => n + (d.files?.length ?? 0), 0)} file
           {project.drawings.reduce((n, d) => n + (d.files?.length ?? 0), 0) === 1 ? '' : 's'}
         </Text>
         <Button
           variant="default"
-          size="xs"
+          size="sm"
           leftSection={<IconStack2 size={15} />}
           onClick={setModalCtl.open}
         >
