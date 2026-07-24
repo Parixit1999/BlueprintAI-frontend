@@ -1,15 +1,17 @@
 import { Badge, Button, Group, Modal, Stack, Text, TextInput, Textarea } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconFolderPlus } from '@tabler/icons-react'
+import { IconFolderPlus, IconSearch } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createProject, listProjects } from '../api'
+import { createProject, listFiles, listProjects } from '../api'
 import ErrorState from '../components/ErrorState'
 import Loading from '../components/Loading'
 import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 
 export default function Projects() {
+  const [unassigned, setUnassigned] = useState(0)
+  const [query, setQuery] = useState('')
   const [projects, setProjects] = useState(null)
   const [loadError, setLoadError] = useState(null)
   const [opened, { open, close }] = useDisclosure(false)
@@ -27,6 +29,11 @@ export default function Projects() {
         setLoadError(null)
       })
       .catch((e) => (projects ? toast.error(e.message) : setLoadError(e.message)))
+      .finally(() =>
+        listFiles()
+          .then((fs) => setUnassigned(fs.filter((f) => !f.drawing_id).length))
+          .catch(() => {}),
+      )
   }
 
   useEffect(() => {
@@ -69,6 +76,32 @@ export default function Projects() {
         }
       />
 
+      {(projects?.length ?? 0) > 0 && (
+        <TextInput
+          mb="md"
+          w={360}
+          size="sm"
+          radius="md"
+          leftSection={<IconSearch size={16} />}
+          placeholder="Search projects by name or number…"
+          value={query}
+          onChange={(e) => setQuery(e.currentTarget.value)}
+        />
+      )}
+
+      {unassigned > 0 && (
+        <div className="notice">
+          <span className="notice-icon">!</span>
+          <span>
+            {unassigned} file{unassigned === 1 ? ' is' : 's are'} not filed under any
+            drawing yet.
+          </span>
+          <button className="link-btn" onClick={() => navigate('/documents?assigned=no')}>
+            Review and assign
+          </button>
+        </div>
+      )}
+
       {projects === null && loadError ? (
         <ErrorState message={loadError} onRetry={refresh} />
       ) : projects === null ? (
@@ -95,7 +128,15 @@ export default function Projects() {
               </tr>
             </thead>
             <tbody>
-              {projects.map((p) => (
+              {projects
+                .filter((p) => {
+                  const q = query.trim().toLowerCase()
+                  if (!q) return true
+                  return [p.name, p.number, p.description]
+                    .filter(Boolean)
+                    .some((v) => String(v).toLowerCase().includes(q))
+                })
+                .map((p) => (
                 <tr key={p.project_id} onClick={() => navigate(`/projects/${p.project_id}`)}>
                   <td className="cell-name">
                     <div className="name-cell">

@@ -98,6 +98,21 @@ export function UploadQueueProvider({ children }) {
       )
       // scoped upload: attach straight to the drawing the user uploaded from,
       // bypassing the suggestion step entirely
+      if (next.projectId && !next.drawingId) {
+        // project-scoped upload: file a new drawing under that project
+        try {
+          await assignFile(res.file_id, { new_drawing: { project_id: next.projectId } })
+          patch(next.id, {
+            status: 'done',
+            fileId: res.file_id,
+            regions: doc.chunks.length,
+            autoAssignment: { project_name: next.projectName ?? 'this project' },
+          })
+          return 'ok'
+        } catch {
+          // filing failed - fall through to normal suggestion handling
+        }
+      }
       if (next.drawingId) {
         try {
           await assignFile(res.file_id, { drawing_id: next.drawingId })
@@ -189,7 +204,7 @@ export function UploadQueueProvider({ children }) {
   }
 
   async function enqueue(files, folderId = null, scope = {}) {
-    const { drawingId = null, drawingName = null } = scope
+    const { drawingId = null, drawingName = null, projectId = null, projectName = null } = scope
     setExpanding(true)
     const additions = []
     for (const file of files) {
@@ -209,6 +224,8 @@ export function UploadQueueProvider({ children }) {
               source: file.name,
               folderId,
               drawingId,
+              projectId,
+              projectName,
               drawingName,
               status: supported ? 'queued' : 'skipped',
             })
