@@ -76,11 +76,11 @@ export default function Projects() {
         }
       />
 
-      {(projects?.length ?? 0) > 3 && (
+      {(projects?.length ?? 0) > 0 && (
         <input
           className="search"
           style={{ maxWidth: 320, marginBottom: 12 }}
-          placeholder="Search projects…"
+          placeholder="Search projects by name or number…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
