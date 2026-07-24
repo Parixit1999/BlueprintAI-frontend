@@ -398,8 +398,9 @@ export default function ProjectDetail() {
                 )}
               </div>
               {group.drawings.length === 0 && (
-                <p className="empty-note">
-                  Empty set — assign drawings to it from their drawing page.
+                <p className="empty-note explorer-empty">
+                  No drawings in this set yet — open a drawing and pick this set in its
+                  “Drawing set” field.
                 </p>
               )}
               {group.drawings.map((d) => (
@@ -423,7 +424,11 @@ export default function ProjectDetail() {
                     <span className="explorer-desc">
                       {d.description ?? ''}
                     </span>
-                    <span className="muted">{d.drawing_date ?? d.year ?? ''}</span>
+                    {(d.drawing_date ?? d.year) && (
+                      <span className="muted" title="Drawing date/year">
+                        dated {d.drawing_date ?? d.year}
+                      </span>
+                    )}
                     <Badge variant="light" color={d.files?.length ? 'brand' : 'gray'}>
                       {d.files?.length ?? 0} file{(d.files?.length ?? 0) === 1 ? '' : 's'}
                     </Badge>

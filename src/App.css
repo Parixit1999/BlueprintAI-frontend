@@ -1922,3 +1922,10 @@ tbody tr.no-hover:hover {
   color: var(--accent);
   text-decoration: underline;
 }
+
+.explorer-section .explorer-empty {
+  padding: 12px 16px;
+  margin: 0;
+  font-size: 13px;
+  font-style: italic;
+}
