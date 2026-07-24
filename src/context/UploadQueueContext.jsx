@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 import { createContext, useContext, useRef, useState } from 'react'
-import { uploadFile } from '../api'
+import { assignFile, uploadFile } from '../api'
 import { useToast } from '../components/Toast'
 
 export const SUPPORTED = ['dxf', 'dwg', 'rvt', 'pdf', 'png', 'jpg', 'jpeg', 'tif', 'tiff', 'bmp', 'webp', 'heic', 'heif']
@@ -69,6 +69,22 @@ export function UploadQueueProvider({ children }) {
         },
         next.folderId ?? null,
       )
+      // scoped upload: attach straight to the drawing the user uploaded from,
+      // bypassing the suggestion step entirely
+      if (next.drawingId) {
+        try {
+          await assignFile(res.file_id, { drawing_id: next.drawingId })
+          patch(next.id, {
+            status: 'done',
+            fileId: res.file_id,
+            regions: res.chunks.length,
+            autoAssignment: { dwg_number: next.drawingName ?? 'this drawing' },
+          })
+          return 'ok'
+        } catch {
+          // attach failed - fall through to normal suggestion handling
+        }
+      }
       const sugg = res.suggestions ?? {}
       const topDrawing = (sugg.drawing_suggestions ?? [])[0] ?? null
       const topProject = (sugg.project_suggestions ?? [])[0] ?? null
@@ -134,7 +150,8 @@ export function UploadQueueProvider({ children }) {
     runningRef.current = false
   }
 
-  async function enqueue(files, folderId = null) {
+  async function enqueue(files, folderId = null, scope = {}) {
+    const { drawingId = null, drawingName = null } = scope
     setExpanding(true)
     const additions = []
     for (const file of files) {
@@ -153,6 +170,8 @@ export function UploadQueueProvider({ children }) {
               file: blob,
               source: file.name,
               folderId,
+              drawingId,
+              drawingName,
               status: supported ? 'queued' : 'skipped',
             })
           }
@@ -166,6 +185,8 @@ export function UploadQueueProvider({ children }) {
           name: file.name,
           file,
           folderId,
+          drawingId,
+          drawingName,
           status: supported ? 'queued' : 'skipped',
         })
       }

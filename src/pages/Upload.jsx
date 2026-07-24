@@ -39,6 +39,8 @@ export default function Upload() {
   const toast = useToast()
   const [searchParams] = useSearchParams()
   const uploadFolderId = searchParams.get('folder')
+  const scopeDrawingId = searchParams.get('drawing')
+  const scopeDrawingName = searchParams.get('drawingName')
   // per-item overrides after the user acts on a suggestion / undo
   const [resolved, setResolved] = useState({}) // itemId -> {kind: 'undone'|'assigned', label?}
   const [actingOn, setActingOn] = useState(null)
@@ -86,16 +88,22 @@ export default function Upload() {
     active,
   } = useUploadQueue()
 
-  const handleDrop = (files) => enqueue(files, uploadFolderId)
+  const handleDrop = (files) =>
+    enqueue(files, uploadFolderId, {
+      drawingId: scopeDrawingId,
+      drawingName: scopeDrawingName,
+    })
 
   return (
     <Box>
       <PageHeader
         title="Upload drawings"
         description={
-          uploadFolderId
-            ? 'Files uploaded here land in the selected folder in Files.'
-            : 'Add CAD (.dxf, .dwg), Revit models (.rvt), PDFs (vector or scanned), or drawing images (PNG, JPG, TIFF, HEIC...). Drop many files at once, or a .zip archive for bulk import.'
+          scopeDrawingId
+            ? `Files uploaded here attach directly to drawing ${scopeDrawingName ?? 'you came from'} — no assignment step needed.`
+            : uploadFolderId
+              ? 'Files uploaded here land in the selected folder in Files.'
+              : 'Add CAD (.dxf, .dwg), Revit models (.rvt), PDFs (vector or scanned), or drawing images (PNG, JPG, TIFF, HEIC...). Drop many files at once, or a .zip archive for bulk import.'
         }
       />
 

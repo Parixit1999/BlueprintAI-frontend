@@ -266,7 +266,18 @@ export default function DrawingDetail() {
           <Paper withBorder radius="md" p="md">
             <Group justify="space-between" mb="sm">
               <Text fw={600}>Files ({drawing.files.length})</Text>
-              <Button variant="default" size="xs" onClick={() => navigate('/upload')}>
+              <Button
+                variant="default"
+                size="xs"
+                onClick={() =>
+                  navigate(
+                    `/upload?drawing=${drawingId}` +
+                      (drawing.dwg_number
+                        ? `&drawingName=${encodeURIComponent(drawing.dwg_number)}`
+                        : ''),
+                  )
+                }
+              >
                 Upload more
               </Button>
             </Group>
