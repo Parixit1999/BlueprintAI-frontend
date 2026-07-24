@@ -11,10 +11,24 @@ import {
   Textarea,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconArrowLeft, IconFilePlus, IconStack2, IconTrash, IconUpload } from '@tabler/icons-react'
+import {
+  IconArrowLeft,
+  IconFilePlus,
+  IconPencil,
+  IconStack2,
+  IconTrash,
+  IconUpload,
+} from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { createDrawing, createSet, deleteProject, deleteSet, getProject } from '../api'
+import {
+  createDrawing,
+  createSet,
+  deleteProject,
+  deleteSet,
+  getProject,
+  updateProject,
+} from '../api'
 import ConfirmDialog from '../components/ConfirmDialog'
 import ErrorState from '../components/ErrorState'
 import Loading from '../components/Loading'
@@ -27,6 +41,8 @@ export default function ProjectDetail() {
   const [loadError, setLoadError] = useState(null)
   const [drawingModal, drawingModalCtl] = useDisclosure(false)
   const [setModal, setModalCtl] = useDisclosure(false)
+  const [editModal, editModalCtl] = useDisclosure(false)
+  const [editForm, setEditForm] = useState({ name: '', number: '', description: '' })
   const [pendingDelete, setPendingDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -91,6 +107,34 @@ export default function ProjectDetail() {
     }
   }
 
+  function openEdit() {
+    setEditForm({
+      name: project.name ?? '',
+      number: project.number ?? '',
+      description: project.description ?? '',
+    })
+    editModalCtl.open()
+  }
+
+  async function handleEditProject(e) {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      await updateProject(projectId, {
+        name: editForm.name.trim(),
+        number: editForm.number.trim() || null,
+        description: editForm.description.trim() || null,
+      })
+      toast.success('Project updated.')
+      editModalCtl.close()
+      refresh()
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function handleDeleteSet(setId) {
     try {
       await deleteSet(setId)
@@ -147,6 +191,9 @@ export default function ProjectDetail() {
             </Button>
             <Button leftSection={<IconFilePlus size={16} />} onClick={drawingModalCtl.open}>
               Add drawing
+            </Button>
+            <Button variant="default" leftSection={<IconPencil size={16} />} onClick={openEdit}>
+              Edit
             </Button>
             <Button variant="light" color="red" onClick={() => setPendingDelete(true)}>
               Delete
@@ -303,6 +350,42 @@ export default function ProjectDetail() {
               </Button>
               <Button type="submit" loading={saving}>
                 Add drawing
+              </Button>
+            </Group>
+          </Stack>
+        </form>
+      </Modal>
+
+      <Modal opened={editModal} onClose={editModalCtl.close} title="Edit project" centered>
+        <form onSubmit={handleEditProject}>
+          <Stack gap="sm">
+            <TextInput
+              label="Project name"
+              value={editForm.name}
+              onChange={(e) => setEditForm({ ...editForm, name: e.currentTarget.value })}
+              required
+              data-autofocus
+            />
+            <TextInput
+              label="Project number"
+              description="The registry/job number (e.g. 1234). Powers automatic file-to-project matching."
+              placeholder="e.g. 1234 or 490-W"
+              value={editForm.number}
+              onChange={(e) => setEditForm({ ...editForm, number: e.currentTarget.value })}
+            />
+            <Textarea
+              label="Description"
+              autosize
+              minRows={2}
+              value={editForm.description}
+              onChange={(e) => setEditForm({ ...editForm, description: e.currentTarget.value })}
+            />
+            <Group justify="flex-end" mt="xs">
+              <Button variant="default" onClick={editModalCtl.close}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={saving}>
+                Save changes
               </Button>
             </Group>
           </Stack>
