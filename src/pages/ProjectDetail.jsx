@@ -309,6 +309,8 @@ export default function ProjectDetail() {
           onChange={(e) => setQuery(e.currentTarget.value)}
           w={320}
           size="sm"
+          radius="md"
+          leftSection={<IconSearch size={16} />}
         />
         <Select
           size="sm"

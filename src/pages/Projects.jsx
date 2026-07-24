@@ -1,6 +1,6 @@
 import { Badge, Button, Group, Modal, Stack, Text, TextInput, Textarea } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconFolderPlus } from '@tabler/icons-react'
+import { IconFolderPlus, IconSearch } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createProject, listFiles, listProjects } from '../api'
@@ -77,12 +77,15 @@ export default function Projects() {
       />
 
       {(projects?.length ?? 0) > 0 && (
-        <input
-          className="search"
-          style={{ maxWidth: 320, marginBottom: 12 }}
+        <TextInput
+          mb="md"
+          w={360}
+          size="sm"
+          radius="md"
+          leftSection={<IconSearch size={16} />}
           placeholder="Search projects by name or number…"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => setQuery(e.currentTarget.value)}
         />
       )}
 
