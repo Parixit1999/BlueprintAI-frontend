@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 import { createContext, useContext, useRef, useState } from 'react'
-import { assignFile, uploadFile } from '../api'
+import { assignFile, getExtraction, getFileSuggestions, uploadFile } from '../api'
 import { useToast } from '../components/Toast'
 
 export const SUPPORTED = ['dxf', 'dwg', 'rvt', 'pdf', 'png', 'jpg', 'jpeg', 'tif', 'tiff', 'bmp', 'webp', 'heic', 'heif']
@@ -57,6 +57,29 @@ export function UploadQueueProvider({ children }) {
   const MAX_WORKERS = 8
   const START_WORKERS = 3
 
+  // Upload returns in seconds (the server stores the file and extracts in
+  // the background); we then POLL the document status until extraction
+  // lands. No HTTP request ever waits on the AI, so proxy timeouts cannot
+  // fake a failure - a 12-minute multi-sheet scan just polls longer.
+  const POLL_MS = 4000
+
+  async function waitForExtraction(fileId, patchItem) {
+    for (;;) {
+      await new Promise((r) => setTimeout(r, POLL_MS))
+      let doc
+      try {
+        doc = await getExtraction(fileId)
+      } catch {
+        continue // transient fetch problem - keep polling
+      }
+      if (doc.status === 'failed') {
+        throw new Error(doc.error ?? 'Processing failed. Use Retry from Documents.')
+      }
+      if (doc.status !== 'uploaded') return doc // extracted (or beyond)
+      patchItem()
+    }
+  }
+
   async function processOne(next) {
     patch(next.id, { status: 'uploading', percent: 0 })
     try {
@@ -69,6 +92,10 @@ export function UploadQueueProvider({ children }) {
         },
         next.folderId ?? null,
       )
+      patch(next.id, { status: 'processing', fileId: res.file_id })
+      const doc = await waitForExtraction(res.file_id, () =>
+        patch(next.id, { status: 'processing' }),
+      )
       // scoped upload: attach straight to the drawing the user uploaded from,
       // bypassing the suggestion step entirely
       if (next.drawingId) {
@@ -77,7 +104,7 @@ export function UploadQueueProvider({ children }) {
           patch(next.id, {
             status: 'done',
             fileId: res.file_id,
-            regions: res.chunks.length,
+            regions: doc.chunks.length,
             autoAssignment: { dwg_number: next.drawingName ?? 'this drawing' },
           })
           return 'ok'
@@ -85,14 +112,25 @@ export function UploadQueueProvider({ children }) {
           // attach failed - fall through to normal suggestion handling
         }
       }
-      const sugg = res.suggestions ?? {}
-      const topDrawing = (sugg.drawing_suggestions ?? [])[0] ?? null
-      const topProject = (sugg.project_suggestions ?? [])[0] ?? null
+      // the matcher ran server-side in the background: the document record
+      // now carries the outcome; suggestions come from the standing endpoint
+      let topDrawing = null
+      let topProject = null
+      if (!doc.dwg_number) {
+        try {
+          const sugg = await getFileSuggestions(res.file_id)
+          topDrawing = (sugg.drawing_suggestions ?? [])[0] ?? null
+          topProject = (sugg.project_suggestions ?? [])[0] ?? null
+        } catch {
+          // suggestions are a nicety - the Documents page offers Assign anyway
+        }
+      }
       patch(next.id, {
         status: 'done',
         fileId: res.file_id,
-        regions: res.chunks.length,
-        autoAssignment: res.auto_assignment ?? null,
+        regions: doc.chunks.length,
+        autoAssignment:
+          doc.dwg_number && doc.auto_assigned ? { dwg_number: doc.dwg_number } : null,
         topDrawing,
         topProject,
       })
