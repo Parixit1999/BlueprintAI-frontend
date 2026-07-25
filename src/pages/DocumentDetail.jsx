@@ -151,17 +151,31 @@ export default function DocumentDetail() {
   }, [regionFilter, confFilter, currentPage, sheetScope])
   const cappedChunks = visibleChunks.slice(0, renderCap)
   const hiddenCount = visibleChunks.length - cappedChunks.length
-  const confCounts = chunks.reduce((acc, c) => {
-    if (c.advisory) return acc
+  // Counts must describe what the LIST can actually show, i.e. follow the
+  // sheet scope - otherwise "Summary (1)" renders an empty list on sheets
+  // that have no summary, which reads as data loss.
+  const scopedChunks = chunks.filter(
+    (c) =>
+      !c.advisory &&
+      (pageCount === 1 || sheetScope === 'all' || (c.page ?? 1) === currentPage),
+  )
+  const confCounts = scopedChunks.reduce((acc, c) => {
     acc[c.confidence] = (acc[c.confidence] ?? 0) + 1
     return acc
   }, {})
-  const typeCounts = chunks.reduce((acc, c) => {
-    if (c.advisory) return acc
+  const typeCounts = scopedChunks.reduce((acc, c) => {
     acc[c.region_type] = (acc[c.region_type] ?? 0) + 1
     return acc
   }, {})
-  const reviewableCount = chunks.filter((c) => !c.advisory).length
+  const reviewableCount = scopedChunks.length
+  // regions matching the current filters anywhere in the document - drives
+  // the "look on other sheets" hint when this sheet has none
+  const matchesAnywhere = chunks.filter(
+    (c) =>
+      !c.advisory &&
+      (regionFilter === 'all' || c.region_type === regionFilter) &&
+      (confFilter === 'all' || c.confidence === confFilter),
+  ).length
   const ingesting = status === 'ingesting'
   const extracting = status === 'uploaded'
 
@@ -509,6 +523,24 @@ export default function DocumentDetail() {
                 })),
             ]}
           />
+          {cappedChunks.length === 0 && (
+            <div className="chunk-list-empty">
+              <p>
+                {pageCount > 1 && sheetScope === 'sheet'
+                  ? `No matching regions on sheet ${currentPage}.`
+                  : 'No regions match the current filters.'}
+              </p>
+              {pageCount > 1 && sheetScope === 'sheet' && matchesAnywhere > 0 && (
+                <Button
+                  variant="light"
+                  size="compact-sm"
+                  onClick={() => setSheetScope('all')}
+                >
+                  Show {matchesAnywhere} matching across all {pageCount} sheets
+                </Button>
+              )}
+            </div>
+          )}
           {cappedChunks.map(({ c, i }) => (
             <div
               key={i}
