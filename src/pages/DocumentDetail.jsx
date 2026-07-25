@@ -1,4 +1,4 @@
-import { Button, SegmentedControl, Textarea, Tooltip } from '@mantine/core'
+import { Button, Loader, SegmentedControl, Textarea, Tooltip } from '@mantine/core'
 import { IconArrowLeft, IconMessageCircle, IconSparkles, IconTrash } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -15,6 +15,7 @@ export default function DocumentDetail() {
   const [filename, setFilename] = useState(null)
   const [isDrawing, setIsDrawing] = useState(null)
   const [chunks, setChunks] = useState([])
+  const [loadingChunks, setLoadingChunks] = useState(true)
   const [edits, setEdits] = useState({})
   const [rejected, setRejected] = useState(new Set())
   const [focused, setFocused] = useState(null)
@@ -40,6 +41,7 @@ export default function DocumentDetail() {
         setProjectName(res.project_name ?? null)
       })
       .catch((e) => toast.error(e.message))
+      .finally(() => setLoadingChunks(false))
   }, [fileId])
 
   // ---- Key information (ingested view) ----
@@ -126,6 +128,7 @@ export default function DocumentDetail() {
   // Title blocks carry the identifying facts, so they lead; the original
   // extraction index (i) stays attached because edits/rejections key on it.
   const TYPE_ORDER = { summary: 0, title_block: 1, component: 2, bom: 3, dimension: 4, note: 5 }
+  const RENDER_SLICE = 150
   const visibleChunks = chunks
     .map((c, i) => ({ c, i }))
     .filter(({ c }) => !c.advisory)
@@ -140,6 +143,14 @@ export default function DocumentDetail() {
         (TYPE_ORDER[a.c.region_type] ?? 9) - (TYPE_ORDER[b.c.region_type] ?? 9) ||
         a.i - b.i,
     )
+  // Pathological files extract thousands of regions; mounting them all at
+  // once freezes the tab. Render in slices - filters reset the window.
+  const [renderCap, setRenderCap] = useState(RENDER_SLICE)
+  useEffect(() => {
+    setRenderCap(RENDER_SLICE)
+  }, [regionFilter, confFilter, currentPage, sheetScope])
+  const cappedChunks = visibleChunks.slice(0, renderCap)
+  const hiddenCount = visibleChunks.length - cappedChunks.length
   const confCounts = chunks.reduce((acc, c) => {
     if (c.advisory) return acc
     acc[c.confidence] = (acc[c.confidence] ?? 0) + 1
@@ -339,7 +350,14 @@ export default function DocumentDetail() {
             onPageChange={goToPage}
           />
         </div>
-        {status === 'ingested' && !showAllRegions ? (
+        {loadingChunks ? (
+          <div className="chunk-list">
+            <div className="panel chunk-list-loading">
+              <Loader size="sm" />
+              <span>Loading extracted regions…</span>
+            </div>
+          </div>
+        ) : status === 'ingested' && !showAllRegions ? (
           <div className="chunk-list">
             <div className="panel key-info">
               <div className="key-info-header">Key information</div>
@@ -491,7 +509,7 @@ export default function DocumentDetail() {
                 })),
             ]}
           />
-          {visibleChunks.map(({ c, i }) => (
+          {cappedChunks.map(({ c, i }) => (
             <div
               key={i}
               className={[
@@ -549,6 +567,16 @@ export default function DocumentDetail() {
               )}
             </div>
           ))}
+          {hiddenCount > 0 && (
+            <Button
+              variant="default"
+              fullWidth
+              mt="xs"
+              onClick={() => setRenderCap((cap) => cap + RENDER_SLICE)}
+            >
+              Show {Math.min(hiddenCount, RENDER_SLICE)} more ({hiddenCount} remaining)
+            </Button>
+          )}
         </div>
         )}
       </div>
