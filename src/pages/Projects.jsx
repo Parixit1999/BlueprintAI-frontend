@@ -1,4 +1,4 @@
-import { Badge, Button, Group, Modal, Stack, Text, TextInput, Textarea } from '@mantine/core'
+import { Badge, Button, Group, Modal, Pagination, Stack, Text, TextInput, Textarea } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconFolderPlus, IconSearch } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
@@ -9,9 +9,22 @@ import Loading from '../components/Loading'
 import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 
+const PAGE_SIZE = 10
+const PROJECT_SORTS = {
+  name: (p) => p.name?.toLowerCase() ?? '',
+  number: (p) => p.number?.toLowerCase() ?? '￿',
+  drawings: (p) => p.drawing_count ?? 0,
+  sets: (p) => p.set_count ?? 0,
+  files: (p) => p.file_count ?? 0,
+  created: (p) => p.created_at ?? '',
+}
+
 export default function Projects() {
   const [unassigned, setUnassigned] = useState(0)
   const [query, setQuery] = useState('')
+  const [sortKey, setSortKey] = useState('created')
+  const [sortDir, setSortDir] = useState('desc')
+  const [page, setPage] = useState(1)
   const [projects, setProjects] = useState(null)
   const [loadError, setLoadError] = useState(null)
   const [opened, { open, close }] = useDisclosure(false)
@@ -39,6 +52,35 @@ export default function Projects() {
   useEffect(() => {
     refresh()
   }, [])
+
+  function toggleSort(key) {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+    setPage(1)
+  }
+  const sortIndicator = (key) =>
+    sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''
+
+  const visible = (projects ?? []).filter((p) => {
+    const q = query.trim().toLowerCase()
+    if (!q) return true
+    return [p.name, p.number, p.description]
+      .filter(Boolean)
+      .some((v) => String(v).toLowerCase().includes(q))
+  })
+  const accessor = PROJECT_SORTS[sortKey] ?? PROJECT_SORTS.created
+  const dir = sortDir === 'asc' ? 1 : -1
+  const sorted = [...visible].sort((a, b) => {
+    const va = accessor(a)
+    const vb = accessor(b)
+    return va < vb ? -dir : va > vb ? dir : 0
+  })
+  const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const paged = sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   async function handleCreate(e) {
     e.preventDefault()
@@ -119,24 +161,28 @@ export default function Projects() {
           <table>
             <thead>
               <tr>
-                <th>Project</th>
-                <th>Number</th>
-                <th>Drawings</th>
-                <th>Sets</th>
-                <th>Files</th>
-                <th>Created</th>
+                <th className="th-sortable" onClick={() => toggleSort('name')}>
+                  Project{sortIndicator('name')}
+                </th>
+                <th className="th-sortable" onClick={() => toggleSort('number')}>
+                  Number{sortIndicator('number')}
+                </th>
+                <th className="th-sortable" onClick={() => toggleSort('drawings')}>
+                  Drawings{sortIndicator('drawings')}
+                </th>
+                <th className="th-sortable" onClick={() => toggleSort('sets')}>
+                  Sets{sortIndicator('sets')}
+                </th>
+                <th className="th-sortable" onClick={() => toggleSort('files')}>
+                  Files{sortIndicator('files')}
+                </th>
+                <th className="th-sortable" onClick={() => toggleSort('created')}>
+                  Created{sortIndicator('created')}
+                </th>
               </tr>
             </thead>
             <tbody>
-              {projects
-                .filter((p) => {
-                  const q = query.trim().toLowerCase()
-                  if (!q) return true
-                  return [p.name, p.number, p.description]
-                    .filter(Boolean)
-                    .some((v) => String(v).toLowerCase().includes(q))
-                })
-                .map((p) => (
+              {paged.map((p) => (
                 <tr key={p.project_id} onClick={() => navigate(`/projects/${p.project_id}`)}>
                   <td className="cell-name">
                     <div className="name-cell">
@@ -160,8 +206,21 @@ export default function Projects() {
                   <td className="cell-date">{new Date(p.created_at).toLocaleDateString()}</td>
                 </tr>
               ))}
+              {paged.length === 0 && (
+                <tr className="no-hover">
+                  <td colSpan={6} className="empty-note center">
+                    No projects match this search.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {projects !== null && pageCount > 1 && (
+        <div className="table-pagination">
+          <Pagination total={pageCount} value={currentPage} onChange={setPage} size="sm" />
         </div>
       )}
 

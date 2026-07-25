@@ -1967,3 +1967,18 @@ tbody tr.no-hover:hover {
   font-size: 14px;
   text-align: center;
 }
+
+/* Sortable table headers + pagination row */
+.th-sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.th-sortable:hover {
+  color: var(--mantine-color-brand-7);
+}
+.table-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 14px;
+}
