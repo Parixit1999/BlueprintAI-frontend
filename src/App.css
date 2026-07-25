@@ -1944,3 +1944,14 @@ tbody tr.no-hover:hover {
 .msg-user .msg-time {
   text-align: right;
 }
+
+/* Region panel while the extraction payload is loading */
+.chunk-list-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 28px 16px;
+  color: var(--mantine-color-gray-6);
+  font-size: 14px;
+}
