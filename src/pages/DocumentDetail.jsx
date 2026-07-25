@@ -214,12 +214,13 @@ export default function DocumentDetail() {
       const corrections = Object.fromEntries(
         Object.entries(edits).filter(([i, v]) => v !== (chunks[i].chunk_text ?? '')),
       )
-      const res = await confirmAndIngest(fileId, corrections, [...rejected])
-      setStatus('ingested')
+      // returns immediately with {status: 'ingesting'} - embedding runs
+      // server-side in the background; the status poll flips to 'ingested'
+      await confirmAndIngest(fileId, corrections, [...rejected])
       toast.success(
-        `Added ${res.ingested_chunks} region${res.ingested_chunks === 1 ? '' : 's'} to the knowledge base` +
+        'Adding to the knowledge base — this continues in the background' +
           (Object.keys(corrections).length ? ` with ${Object.keys(corrections).length} correction(s)` : '') +
-          (res.rejected ? `, ${res.rejected} rejected` : '') +
+          (rejected.size ? `, ${rejected.size} rejected` : '') +
           '.',
       )
     } catch (e) {
