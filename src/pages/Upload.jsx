@@ -84,6 +84,7 @@ export default function Upload() {
     enqueue,
     clearFinished,
     removeItem,
+    retryItem,
     total,
     done,
     failed,
@@ -314,6 +315,15 @@ export default function Upload() {
                         onClick={() => navigate(`/documents/${item.fileId}`)}
                       >
                         Review
+                      </Button>
+                    )}
+                    {item.status === 'error' && item.file && (
+                      <Button
+                        size="compact-xs"
+                        variant="light"
+                        onClick={() => retryItem(item.id)}
+                      >
+                        Retry
                       </Button>
                     )}
                     {item.status !== 'done' && (
