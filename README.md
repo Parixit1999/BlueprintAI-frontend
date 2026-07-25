@@ -30,8 +30,12 @@ The API base URL comes from `VITE_API_BASE` (defaults to `http://localhost:8000/
 ## Production build
 
 ```bash
-VITE_API_BASE=/api npm run build    # output in dist/, served via S3 + CloudFront
+npm run build    # output in dist/, served via S3 + CloudFront
 ```
+
+The committed `.env.production` sets `VITE_API_BASE=/api` automatically, so a
+plain build is production-correct. (Passing the variable explicitly still works
+and overrides it.)
 
 Same-origin `/api/*` requests are routed by CloudFront to the backend, so no CORS
 configuration is needed in production.
