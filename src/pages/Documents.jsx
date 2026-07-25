@@ -123,11 +123,12 @@ export default function Documents() {
   const pageCount = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount)
 
-  // every sortable column advertises itself: dimmed ↕ when inactive,
-  // solid direction arrow when active
+  // constant-size ↑↓ pair on every sortable column - only the active
+  // direction lights up, so nothing ever changes size on click
   const sortIndicator = (key) => (
-    <span className={sortKey === key ? 'sort-arrow active' : 'sort-arrow'}>
-      {sortKey === key ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
+    <span className="sort-arrow">
+      <span className={sortKey === key && sortDir === 'asc' ? 'on' : ''}>↑</span>
+      <span className={sortKey === key && sortDir === 'desc' ? 'on' : ''}>↓</span>
     </span>
   )
 
