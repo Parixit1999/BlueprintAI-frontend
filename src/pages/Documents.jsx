@@ -1,8 +1,8 @@
-import { Button } from '@mantine/core'
+import { Button, Pagination } from '@mantine/core'
 import { IconDatabaseImport, IconUpload } from '@tabler/icons-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { confirmAndIngest, deleteFile, listFiles, retryExtraction } from '../api'
+import { confirmAndIngest, deleteFile, listFilesPaged, retryExtraction } from '../api'
 import AssignModal from '../components/AssignModal'
 import { StatusBadge } from '../components/Badges'
 import CompareModal from '../components/CompareModal'
@@ -21,7 +21,7 @@ const STATUS_OPTIONS = [
   { value: 'ingested', label: 'Ingested' },
   { value: 'failed', label: 'Failed' },
 ]
-const PROCESSING_STATUSES = new Set(['uploaded', 'ingesting'])
+const PAGE_SIZE = 10
 
 export default function Documents() {
   const [files, setFiles] = useState(null)
@@ -35,6 +35,9 @@ export default function Documents() {
   const statusFilter = searchParams.get('status') ?? 'all'
   const assignedFilter = searchParams.get('assigned') ?? 'all'
   const dupOnly = searchParams.get('dup') === '1'
+  const sortKey = searchParams.get('sort') ?? 'uploaded'
+  const sortDir = searchParams.get('dir') ?? 'desc'
+  const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1)
   const [pendingDelete, setPendingDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const [comparing, setComparing] = useState(null)
@@ -65,51 +68,63 @@ export default function Documents() {
         const next = new URLSearchParams(prev)
         if (value === '' || value === 'all' || value === false) next.delete(key)
         else next.set(key, value === true ? '1' : value)
+        // changing what's shown restarts at page 1 (unless paging itself)
+        if (key !== 'page') next.delete('page')
         return next
       },
       { replace: true },
     )
   }
 
+  // clicking a header sorts by it; clicking again flips direction
+  function toggleSort(key) {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        const dir = prev.get('sort') === key && (prev.get('dir') ?? 'desc') === 'asc' ? 'desc' : 'asc'
+        next.set('sort', key)
+        next.set('dir', dir)
+        next.delete('page')
+        return next
+      },
+      { replace: true },
+    )
+  }
+
+  // Server-side listing: filters, sort, and paging all run in SQL - the
+  // page costs the same whether the archive has 14 documents or 14,000.
+  const listParams = {
+    q: query, file_type: typeFilter, status: statusFilter,
+    assigned: assignedFilter, dup_only: dupOnly, sort: sortKey, dir: sortDir,
+    page, page_size: PAGE_SIZE,
+  }
   function refresh() {
-    return listFiles()
-      .then((f) => {
-        setFiles(f)
+    return listFilesPaged(listParams)
+      .then((d) => {
+        setFiles(d)
         setLoadError(null)
       })
       .catch((e) => (files ? toast.error(e.message) : setLoadError(e.message)))
   }
 
+  // refetch on any parameter change; keystrokes in search debounce briefly
   useEffect(() => {
-    refresh()
-  }, [])
+    const t = setTimeout(refresh, query ? 250 : 0)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, typeFilter, statusFilter, assignedFilter, dupOnly, sortKey, sortDir, page])
 
-  const types = useMemo(
-    () => [...new Set((files ?? []).map((f) => f.file_type))].sort(),
-    [files],
-  )
-  const duplicateCount = useMemo(
-    () => (files ?? []).filter((f) => f.is_duplicate).length,
-    [files],
-  )
-  const pendingReviewCount = useMemo(
-    () => (files ?? []).filter((f) => f.status === 'extracted').length,
-    [files],
-  )
+  const items = files?.items ?? []
+  const types = files?.types ?? []
+  const duplicateCount = files?.duplicate_count ?? 0
+  const pendingReviewCount = files?.pending_review_count ?? 0
+  const totalFiltered = files?.total ?? 0
+  const grandTotal = files?.grand_total ?? 0
+  const pageCount = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
 
-  const filtered = useMemo(() => {
-    return (files ?? []).filter((f) => {
-      if (query && !f.filename.toLowerCase().includes(query.toLowerCase())) return false
-      if (typeFilter !== 'all' && f.file_type !== typeFilter) return false
-      if (statusFilter === 'processing') {
-        if (!PROCESSING_STATUSES.has(f.status)) return false
-      } else if (statusFilter !== 'all' && f.status !== statusFilter) return false
-      if (assignedFilter === 'yes' && !f.drawing_id) return false
-      if (assignedFilter === 'no' && f.drawing_id) return false
-      if (dupOnly && !f.is_duplicate) return false
-      return true
-    })
-  }, [files, query, typeFilter, statusFilter, assignedFilter, dupOnly])
+  const sortIndicator = (key) =>
+    sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''
 
   // Bulk-confirm every document awaiting review, as extracted (no
   // corrections). Three at a time, same as uploads; each document is
@@ -117,7 +132,17 @@ export default function Documents() {
   async function ingestAll() {
     setConfirmIngestAll(false)
     setBulkIngesting(true)
-    const queue = (files ?? []).filter((f) => f.status === 'extracted')
+    // the visible page may not hold every reviewable document - ask the
+    // server for the full extracted set
+    let queue = []
+    try {
+      const res = await listFilesPaged({ status: 'extracted', page_size: 100 })
+      queue = res.items
+    } catch (e) {
+      toast.error(e.message)
+      setBulkIngesting(false)
+      return
+    }
     // every document acknowledges the click IMMEDIATELY: those beyond the
     // worker pool show "Queued" until a worker claims them (server status
     // then takes over via refresh)
@@ -217,7 +242,7 @@ export default function Documents() {
         <ErrorState message={loadError} onRetry={refresh} />
       ) : files === null ? (
         <Loading label="Loading documents…" />
-      ) : files.length === 0 ? (
+      ) : grandTotal === 0 ? (
         // keep the table frame even when empty - the page reads as the same
         // screen it will be once documents exist, not a different layout
         <div className="panel table-panel">
@@ -279,7 +304,7 @@ export default function Documents() {
               Duplicates only
             </label>
             <span className="filter-count">
-              {filtered.length} of {files.length}
+              {totalFiltered} of {grandTotal}
             </span>
           </div>
 
@@ -287,16 +312,26 @@ export default function Documents() {
             <table>
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Assignment</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th>Uploaded</th>
+                  <th className="th-sortable" onClick={() => toggleSort('name')}>
+                    Name{sortIndicator('name')}
+                  </th>
+                  <th className="th-sortable" onClick={() => toggleSort('assignment')}>
+                    Assignment{sortIndicator('assignment')}
+                  </th>
+                  <th className="th-sortable" onClick={() => toggleSort('type')}>
+                    Type{sortIndicator('type')}
+                  </th>
+                  <th className="th-sortable" onClick={() => toggleSort('status')}>
+                    Status{sortIndicator('status')}
+                  </th>
+                  <th className="th-sortable" onClick={() => toggleSort('uploaded')}>
+                    Uploaded{sortIndicator('uploaded')}
+                  </th>
                   <th className="th-actions">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((f) => {
+                {items.map((f) => {
                   const match = f.similar_documents?.[0]
                   return (
                   <tr key={f.file_id} onClick={() => navigate(`/documents/${f.file_id}`)}>
@@ -433,7 +468,7 @@ export default function Documents() {
                   </tr>
                   )
                 })}
-                {filtered.length === 0 && (
+                {items.length === 0 && (
                   <tr className="no-hover">
                     <td colSpan={6} className="empty-note center">
                       No documents match these filters.
@@ -443,6 +478,17 @@ export default function Documents() {
               </tbody>
             </table>
           </div>
+
+          {pageCount > 1 && (
+            <div className="table-pagination">
+              <Pagination
+                total={pageCount}
+                value={currentPage}
+                onChange={(p) => setFilter('page', String(p))}
+                size="sm"
+              />
+            </div>
+          )}
         </>
       )}
 

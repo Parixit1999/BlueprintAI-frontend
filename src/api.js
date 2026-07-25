@@ -136,6 +136,19 @@ export function listFiles() {
   return request('/files')
 }
 
+// Server-side paged/sorted/filtered listing: {items, total, grand_total,
+// pending_review_count, duplicate_count, types, page, page_size}
+export function listFilesPaged(params = {}) {
+  const qs = new URLSearchParams()
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== '' && v !== 'all' && v !== false) {
+      qs.set(k, v === true ? 'true' : v)
+    }
+  }
+  if (!qs.has('page')) qs.set('page', '1')
+  return request(`/files?${qs.toString()}`)
+}
+
 export function getExtraction(fileId) {
   return request(`/files/${fileId}/extraction`)
 }
