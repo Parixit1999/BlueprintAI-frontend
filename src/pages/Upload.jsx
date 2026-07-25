@@ -316,12 +316,21 @@ export default function Upload() {
                         Review
                       </Button>
                     )}
-                    {(item.status === 'error' || item.status === 'skipped') && (
+                    {item.status !== 'done' && (
                       <ActionIcon
                         variant="subtle"
                         color="gray"
                         size="sm"
-                        aria-label="Remove"
+                        aria-label={
+                          ['queued', 'uploading', 'processing'].includes(item.status)
+                            ? 'Cancel upload'
+                            : 'Remove'
+                        }
+                        title={
+                          item.status === 'processing'
+                            ? 'Cancel — discards this document and its processing'
+                            : undefined
+                        }
                         onClick={() => removeItem(item.id)}
                       >
                         <IconTrash size={15} />

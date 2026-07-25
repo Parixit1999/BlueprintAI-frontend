@@ -83,7 +83,7 @@ export function changePassword(currentPassword, newPassword) {
 // Uploaded via XHR (not fetch) so we can report real progress. onProgress gets
 // { phase: 'uploading', percent } while bytes transfer, then { phase: 'processing' }
 // once the request is fully sent and the server is extracting (vision/LLM/parse).
-export function uploadFile(file, filename, onProgress, folderId = null) {
+export function uploadFile(file, filename, onProgress, folderId = null, handle = null) {
   return new Promise((resolve, reject) => {
     const form = new FormData()
     if (filename) form.append('file', file, filename)
@@ -91,6 +91,13 @@ export function uploadFile(file, filename, onProgress, folderId = null) {
     if (folderId) form.append('folder_id', folderId)
 
     const xhr = new XMLHttpRequest()
+    // let the caller cancel the in-flight upload (handle.abort())
+    if (handle) handle.abort = () => xhr.abort()
+    xhr.onabort = () => {
+      const err = new Error('Upload canceled.')
+      err.canceled = true
+      reject(err)
+    }
     xhr.open('POST', `${API_BASE}/files/upload`)
     const token = getToken()
     if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)

@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 import { createContext, useContext, useRef, useState } from 'react'
-import { assignFile, getExtraction, getFileSuggestions, uploadFile } from '../api'
+import { assignFile, deleteFile, getExtraction, getFileSuggestions, listFiles, uploadFile } from '../api'
 import { useToast } from '../components/Toast'
 
 export const SUPPORTED = ['dxf', 'dwg', 'rvt', 'pdf', 'png', 'jpg', 'jpeg', 'tif', 'tiff', 'bmp', 'webp', 'heic', 'heif']
@@ -42,6 +42,8 @@ export function UploadQueueProvider({ children }) {
   const [items, setItems] = useState([])
   const [expanding, setExpanding] = useState(false)
   const runningRef = useRef(false)
+  // per-item XHR abort functions for in-flight uploads
+  const abortHandles = useRef(new Map())
   const toast = useToast()
 
   function patch(id, changes) {
@@ -82,6 +84,8 @@ export function UploadQueueProvider({ children }) {
 
   async function processOne(next) {
     patch(next.id, { status: 'uploading', percent: 0 })
+    const handle = {}
+    abortHandles.current.set(next.id, handle)
     try {
       const res = await uploadFile(
         next.file,
@@ -91,6 +95,7 @@ export function UploadQueueProvider({ children }) {
           else patch(next.id, { status: 'processing' })
         },
         next.folderId ?? null,
+        handle,
       )
       patch(next.id, { status: 'processing', fileId: res.file_id })
       const doc = await waitForExtraction(res.file_id, () =>
@@ -151,6 +156,22 @@ export function UploadQueueProvider({ children }) {
       })
       return 'ok'
     } catch (e) {
+      if (e.canceled) {
+        // the abort may have raced a request that already reached the server:
+        // reconcile by deleting the ghost record (same name, still in the
+        // pre-extraction 'uploaded' state - never touches older documents)
+        try {
+          const existing = await listFiles()
+          const ghost = existing.find(
+            (f) => f.filename === next.name && f.status === 'uploaded',
+          )
+          if (ghost) await deleteFile(ghost.file_id)
+        } catch {
+          // best effort - a missed ghost shows up on Documents for manual delete
+        }
+        setItems((prev) => prev.filter((i) => i.id !== next.id))
+        return
+      }
       patch(next.id, { status: 'error', error: e.message })
       return /throttl|rate limit|too many requests|slow down/i.test(e.message)
         ? 'throttled'
@@ -258,6 +279,16 @@ export function UploadQueueProvider({ children }) {
   }
 
   function removeItem(id) {
+    // real cancel, phase-aware: an in-flight upload is aborted; a file
+    // already processing server-side is deleted (its background job's
+    // result is discarded with the record). Finished rows just clear.
+    const item = items.find((i) => i.id === id)
+    if (item?.status === 'uploading') {
+      abortHandles.current.get(id)?.abort?.()
+    } else if (item?.fileId && item.status === 'processing') {
+      deleteFile(item.fileId).catch(() => {})
+    }
+    abortHandles.current.delete(id)
     setItems((prev) => prev.filter((i) => i.id !== id))
   }
 
