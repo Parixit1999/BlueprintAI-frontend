@@ -1051,6 +1051,9 @@ tbody tr.no-hover:hover {
 }
 
 .viewer {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
   position: relative;
   display: block;
   max-width: 100%;
