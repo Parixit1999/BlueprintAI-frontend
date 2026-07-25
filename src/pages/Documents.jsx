@@ -142,8 +142,10 @@ export default function Documents() {
     setBulkIngesting(false)
     setQueuedIds(new Set())
     refresh()
-    if (failed) toast.error(`${ok} added to the knowledge base; ${failed} failed — see the list for details.`)
-    else toast.success(`${ok} document${ok === 1 ? '' : 's'} added to the knowledge base.`)
+    // confirms return instantly ('ingesting' claims); embedding runs
+    // server-side - rows flip to Ingested as each one finishes
+    if (failed) toast.error(`${ok} ingesting in the background; ${failed} failed to start — see the list.`)
+    else toast.success(`${ok} document${ok === 1 ? '' : 's'} ingesting in the background — status updates as each finishes.`)
   }
 
   async function confirmDelete() {
