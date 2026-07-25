@@ -123,8 +123,13 @@ export default function Documents() {
   const pageCount = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount)
 
-  const sortIndicator = (key) =>
-    sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''
+  // every sortable column advertises itself: dimmed ↕ when inactive,
+  // solid direction arrow when active
+  const sortIndicator = (key) => (
+    <span className={sortKey === key ? 'sort-arrow active' : 'sort-arrow'}>
+      {sortKey === key ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
+    </span>
+  )
 
   // Bulk-confirm every document awaiting review, as extracted (no
   // corrections). Three at a time, same as uploads; each document is

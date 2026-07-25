@@ -61,8 +61,13 @@ export default function Projects() {
     }
     setPage(1)
   }
-  const sortIndicator = (key) =>
-    sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''
+  // every sortable column advertises itself: dimmed ↕ when inactive,
+  // solid direction arrow when active
+  const sortIndicator = (key) => (
+    <span className={sortKey === key ? 'sort-arrow active' : 'sort-arrow'}>
+      {sortKey === key ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
+    </span>
+  )
 
   const visible = (projects ?? []).filter((p) => {
     const q = query.trim().toLowerCase()
