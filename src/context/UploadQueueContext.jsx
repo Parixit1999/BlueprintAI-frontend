@@ -224,6 +224,21 @@ export function UploadQueueProvider({ children }) {
     runningRef.current = false
   }
 
+  function retryItem(id) {
+    // A failed row whose File object is still in memory can simply rejoin
+    // the queue - no re-picking the file. Covers uploads that died because
+    // the server was briefly unavailable (deploy, task replacement).
+    setItems((prev) =>
+      prev.map((i) =>
+        i.id === id && i.status === 'error' && i.file
+          ? { ...i, status: 'queued', error: null, percent: 0, fileId: null }
+          : i,
+      ),
+    )
+    // let the state update land before the runner claims work
+    setTimeout(processQueue, 0)
+  }
+
   async function enqueue(files, folderId = null, scope = {}) {
     const { drawingId = null, drawingName = null, projectId = null, projectName = null } = scope
     setExpanding(true)
@@ -303,6 +318,7 @@ export function UploadQueueProvider({ children }) {
     enqueue,
     clearFinished,
     removeItem,
+    retryItem,
     total,
     done,
     failed,
