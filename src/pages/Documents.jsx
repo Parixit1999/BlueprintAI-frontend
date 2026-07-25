@@ -14,10 +14,14 @@ import { useToast } from '../components/Toast'
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All statuses' },
+  // one option for both server-side busy states: extraction ('uploaded')
+  // and knowledge-base ingestion ('ingesting')
+  { value: 'processing', label: 'Processing' },
   { value: 'extracted', label: 'Needs review' },
   { value: 'ingested', label: 'Ingested' },
   { value: 'failed', label: 'Failed' },
 ]
+const PROCESSING_STATUSES = new Set(['uploaded', 'ingesting'])
 
 export default function Documents() {
   const [files, setFiles] = useState(null)
@@ -97,7 +101,9 @@ export default function Documents() {
     return (files ?? []).filter((f) => {
       if (query && !f.filename.toLowerCase().includes(query.toLowerCase())) return false
       if (typeFilter !== 'all' && f.file_type !== typeFilter) return false
-      if (statusFilter !== 'all' && f.status !== statusFilter) return false
+      if (statusFilter === 'processing') {
+        if (!PROCESSING_STATUSES.has(f.status)) return false
+      } else if (statusFilter !== 'all' && f.status !== statusFilter) return false
       if (assignedFilter === 'yes' && !f.drawing_id) return false
       if (assignedFilter === 'no' && f.drawing_id) return false
       if (dupOnly && !f.is_duplicate) return false
