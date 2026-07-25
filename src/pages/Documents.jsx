@@ -254,12 +254,12 @@ export default function Documents() {
         <div className="panel table-panel">
           <table className="table-fixed">
               <colgroup>
-                <col style={{ width: '32%' }} />
-                <col style={{ width: '19%' }} />
-                <col style={{ width: '8%' }} />
-                <col style={{ width: '11%' }} />
-                <col style={{ width: '12%' }} />
-                <col style={{ width: '18%' }} />
+                <col />
+                <col style={{ width: 200 }} />
+                <col style={{ width: 64 }} />
+                <col style={{ width: 118 }} />
+                <col style={{ width: 112 }} />
+                <col style={{ width: 254 }} />
               </colgroup>
 
             <thead>
@@ -326,12 +326,12 @@ export default function Documents() {
           <div className="panel table-panel">
             <table className="table-fixed">
               <colgroup>
-                <col style={{ width: '32%' }} />
-                <col style={{ width: '19%' }} />
-                <col style={{ width: '8%' }} />
-                <col style={{ width: '11%' }} />
-                <col style={{ width: '12%' }} />
-                <col style={{ width: '18%' }} />
+                <col />
+                <col style={{ width: 200 }} />
+                <col style={{ width: 64 }} />
+                <col style={{ width: 118 }} />
+                <col style={{ width: 112 }} />
+                <col style={{ width: 254 }} />
               </colgroup>
 
               <thead>

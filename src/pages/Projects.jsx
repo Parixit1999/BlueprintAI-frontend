@@ -166,12 +166,12 @@ export default function Projects() {
         <div className="panel table-panel">
           <table className="table-fixed">
             <colgroup>
-              <col style={{ width: '38%' }} />
-              <col style={{ width: '14%' }} />
-              <col style={{ width: '12%' }} />
-              <col style={{ width: '10%' }} />
-              <col style={{ width: '10%' }} />
-              <col style={{ width: '16%' }} />
+              <col />
+              <col style={{ width: 130 }} />
+              <col style={{ width: 110 }} />
+              <col style={{ width: 90 }} />
+              <col style={{ width: 90 }} />
+              <col style={{ width: 130 }} />
             </colgroup>
 
             <thead>

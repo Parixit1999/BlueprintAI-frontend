@@ -628,10 +628,23 @@ tbody tr:last-child td {
    a slot is empty for a given row. */
 .action-grid {
   display: grid !important;
-  grid-template-columns: 56px 70px 58px 52px;
+  grid-template-columns: 54px 66px 56px 52px;
   justify-items: start;
   align-items: center;
   gap: 2px;
+}
+
+/* .cell-action > div (legacy flex layout) outranks .action-grid and leaks
+   justify-content: flex-end and gap: 16px into the grid - flex-end shoves
+   the first slot out of the cell when tracks overflow, and the wide gap
+   pushes Delete past the column edge. Pin both at matching specificity. */
+.cell-action > .action-grid {
+  justify-content: start;
+  gap: 2px;
+}
+/* breathing room between the date and the first action */
+.table-fixed .cell-action {
+  padding-left: 14px;
 }
 
 .cell-date {
@@ -2004,7 +2017,10 @@ tbody tr.no-hover:hover {
 .table-fixed {
   table-layout: fixed;
   width: 100%;
+  min-width: 1020px; /* below this the panel scrolls instead of crushing columns */
 }
-.table-fixed td {
+.table-fixed td,
+.table-fixed th {
+  overflow: hidden; /* content can never paint over a neighboring column */
   overflow-wrap: break-word;
 }
