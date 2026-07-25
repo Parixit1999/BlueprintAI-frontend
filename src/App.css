@@ -1998,3 +1998,13 @@ tbody tr.no-hover:hover {
   color: var(--mantine-color-brand-6);
   font-weight: 700;
 }
+
+/* Fixed table layout: column widths never re-measure when rows change,
+   so sorting/paging cannot shift the table structure */
+.table-fixed {
+  table-layout: fixed;
+  width: 100%;
+}
+.table-fixed td {
+  overflow-wrap: break-word;
+}

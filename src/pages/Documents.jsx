@@ -252,7 +252,16 @@ export default function Documents() {
         // keep the table frame even when empty - the page reads as the same
         // screen it will be once documents exist, not a different layout
         <div className="panel table-panel">
-          <table>
+          <table className="table-fixed">
+              <colgroup>
+                <col style={{ width: '32%' }} />
+                <col style={{ width: '19%' }} />
+                <col style={{ width: '8%' }} />
+                <col style={{ width: '11%' }} />
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '18%' }} />
+              </colgroup>
+
             <thead>
               <tr>
                 <th>Name</th>
@@ -315,7 +324,16 @@ export default function Documents() {
           </div>
 
           <div className="panel table-panel">
-            <table>
+            <table className="table-fixed">
+              <colgroup>
+                <col style={{ width: '32%' }} />
+                <col style={{ width: '19%' }} />
+                <col style={{ width: '8%' }} />
+                <col style={{ width: '11%' }} />
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '18%' }} />
+              </colgroup>
+
               <thead>
                 <tr>
                   <th className="th-sortable" onClick={() => toggleSort('name')}>
