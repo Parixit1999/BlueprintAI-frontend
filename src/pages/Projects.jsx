@@ -164,7 +164,16 @@ export default function Projects() {
         </div>
       ) : (
         <div className="panel table-panel">
-          <table>
+          <table className="table-fixed">
+            <colgroup>
+              <col style={{ width: '38%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '16%' }} />
+            </colgroup>
+
             <thead>
               <tr>
                 <th className="th-sortable" onClick={() => toggleSort('name')}>
