@@ -26,14 +26,21 @@ function DocumentPane({ doc, onDelete }) {
           <Text fw={600} truncate title={doc.filename}>
             {doc.filename}
           </Text>
-          <Group gap="xs" mt={4}>
-            <StatusBadge status={doc.status} />
-            <Badge variant="light" color="gray" size="sm">
-              {doc.file_type?.toUpperCase()}
-            </Badge>
-            <Text size="xs" c="dimmed">
-              {doc.created_at ? new Date(doc.created_at).toLocaleString() : ''}
-            </Text>
+          {/* The matched copy may not be on the current page of the list, in
+              which case only its name is known - render each chip only when
+              its value exists instead of showing empty pills. */}
+          <Group gap="xs" mt={6}>
+            {doc.status && <StatusBadge status={doc.status} />}
+            {doc.file_type && (
+              <Badge variant="light" color="gray" size="sm">
+                {doc.file_type.toUpperCase()}
+              </Badge>
+            )}
+            {doc.created_at && (
+              <Text size="xs" c="dimmed">
+                {new Date(doc.created_at).toLocaleString()}
+              </Text>
+            )}
           </Group>
         </div>
         <DrawingViewer fileId={doc.file_id} />

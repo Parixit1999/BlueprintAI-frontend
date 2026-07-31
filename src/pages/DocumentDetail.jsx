@@ -279,7 +279,9 @@ export default function DocumentDetail() {
         Documents
       </Button>
       <PageHeader
-        title={reviewing ? 'Review extraction' : 'Document'}
+        // The filename is the page's identity - without it the header read
+        // "Document" and gave no way to tell which one you had opened.
+        title={filename ?? (reviewing ? 'Review extraction' : 'Document')}
         description={
           reviewing
             ? 'Verify each region against the drawing. Click a region to highlight it; correct or reject anything wrong, then confirm.'
@@ -508,22 +510,26 @@ export default function DocumentDetail() {
                 })),
             ]}
           />
-          <SegmentedControl
-            size="xs"
-            fullWidth
-            mb="xs"
-            value={regionFilter}
-            onChange={setRegionFilter}
-            data={[
-              { value: 'all', label: `All (${reviewableCount})` },
-              ...['summary', 'title_block', 'component', 'bom', 'dimension', 'note']
-                .filter((t) => typeCounts[t])
-                .map((t) => ({
-                  value: t,
-                  label: `${t === 'title_block' ? 'Title block' : t === 'bom' ? 'BOM' : t === 'summary' ? 'Summary' : t[0].toUpperCase() + t.slice(1) + 's'} (${typeCounts[t]})`,
-                })),
-            ]}
-          />
+          {/* Up to seven region types never fit the panel width - the control
+              keeps its natural size and the strip scrolls, instead of the last
+              option being sliced off at the panel edge. */}
+          <div className="segmented-scroll">
+            <SegmentedControl
+              size="xs"
+              mb="xs"
+              value={regionFilter}
+              onChange={setRegionFilter}
+              data={[
+                { value: 'all', label: `All (${reviewableCount})` },
+                ...['summary', 'title_block', 'component', 'bom', 'dimension', 'note']
+                  .filter((t) => typeCounts[t])
+                  .map((t) => ({
+                    value: t,
+                    label: `${t === 'title_block' ? 'Title block' : t === 'bom' ? 'BOM' : t === 'summary' ? 'Summary' : t[0].toUpperCase() + t.slice(1) + 's'} (${typeCounts[t]})`,
+                  })),
+              ]}
+            />
+          </div>
           {cappedChunks.length === 0 && (
             <div className="chunk-list-empty">
               <p>

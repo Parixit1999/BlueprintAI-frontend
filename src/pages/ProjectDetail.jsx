@@ -1,4 +1,5 @@
 import {
+  ActionIcon,
   Badge,
   Button,
   Group,
@@ -9,12 +10,13 @@ import {
   Text,
   TextInput,
   Textarea,
+  Tooltip,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import {
   IconArrowLeft,
-  IconChevronDown,
   IconChevronRight,
+  IconFile,
   IconFilePlus,
   IconSearch,
   IconPencil,
@@ -42,6 +44,27 @@ import ErrorState from '../components/ErrorState'
 import Loading from '../components/Loading'
 import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
+
+/**
+ * A file attached to a drawing usually repeats that drawing's identity in its
+ * own name ("pj1206-11767-W-59-SHT-3-of-12-pump-base-details.pdf" under
+ * drawing 11767-W-59), so the expanded row printed the same string the header
+ * row above it already carried. Rather than truncate - which would hide the
+ * part that actually tells two files apart - split the name at the drawing
+ * number: the already-stated context is dimmed, the distinguishing tail keeps
+ * full contrast. Nothing is removed; the whole name stays selectable and is
+ * repeated verbatim in the row's tooltip.
+ */
+function splitFilename(filename, dwgNumber) {
+  if (!dwgNumber) return { context: '', distinct: filename }
+  // tolerate -, _, ., and spaces between the parts of a drawing number
+  const loose = dwgNumber.trim().replace(/[^a-z0-9]+/gi, '[^a-z0-9]*')
+  const match = new RegExp(`^.*?${loose}[^a-z0-9]*`, 'i').exec(filename)
+  if (!match || match[0].length >= filename.length) {
+    return { context: '', distinct: filename }
+  }
+  return { context: match[0], distinct: filename.slice(match[0].length) }
+}
 
 export default function ProjectDetail() {
   const { projectId } = useParams()
@@ -405,14 +428,18 @@ export default function ProjectDetail() {
               )}
               {group.drawings.map((d) => (
                 <div key={d.drawing_id} className="explorer-drawing">
-                  <div className="explorer-drawing-row" onClick={() => toggleExpand(d.drawing_id)}>
-                    {isExpanded(d.drawing_id) ? (
-                      <IconChevronDown size={16} className="muted" />
-                    ) : (
-                      <IconChevronRight size={16} className="muted" />
-                    )}
+                  <div
+                    className={`explorer-drawing-row${isExpanded(d.drawing_id) ? ' is-open' : ''}`}
+                    onClick={() => toggleExpand(d.drawing_id)}
+                  >
                     <span
-                      className="explorer-dwg explorer-link"
+                      className={`explorer-chevron${isExpanded(d.drawing_id) ? ' open' : ''}`}
+                      aria-hidden="true"
+                    >
+                      <IconChevronRight size={16} />
+                    </span>
+                    <span
+                      className={`explorer-dwg explorer-link${d.dwg_number ? '' : ' unnumbered'}`}
                       title="Open drawing details"
                       onClick={(e) => {
                         e.stopPropagation()
@@ -421,27 +448,33 @@ export default function ProjectDetail() {
                     >
                       {d.dwg_number ?? 'no DWG #'}
                     </span>
-                    <span className="explorer-desc">
+                    <span className="explorer-desc" title={d.description ?? undefined}>
                       {d.description ?? ''}
                     </span>
-                    {(d.drawing_date ?? d.year) && (
-                      <span className="muted" title="Drawing date/year">
-                        dated {d.drawing_date ?? d.year}
-                      </span>
-                    )}
-                    <Badge variant="light" color={d.files?.length ? 'brand' : 'gray'}>
-                      {d.files?.length ?? 0} file{(d.files?.length ?? 0) === 1 ? '' : 's'}
-                    </Badge>
-                    <Button
-                      variant="subtle"
-                      size="compact-xs"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        navigate(`/drawings/${d.drawing_id}`)
-                      }}
-                    >
-                      Details
-                    </Button>
+                    <span className="explorer-row-meta">
+                      {(d.drawing_date ?? d.year) && (
+                        <span className="explorer-date" title="Drawing date/year">
+                          {d.drawing_date ?? d.year}
+                        </span>
+                      )}
+                      <Badge
+                        variant="light"
+                        color={d.files?.length ? 'brand' : 'gray'}
+                        size="sm"
+                      >
+                        {d.files?.length ?? 0} file{(d.files?.length ?? 0) === 1 ? '' : 's'}
+                      </Badge>
+                      <Button
+                        variant="subtle"
+                        size="compact-xs"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/drawings/${d.drawing_id}`)
+                        }}
+                      >
+                        Details
+                      </Button>
+                    </span>
                   </div>
                   {isExpanded(d.drawing_id) && (
                     <div className="explorer-files">
@@ -450,61 +483,78 @@ export default function ProjectDetail() {
                       )}
                       {(d.files ?? [])
                         .filter((f) => statusFilter === 'all' || f.status === statusFilter)
-                        .map((f) => (
-                        <div key={f.file_id} className="explorer-file-row">
-                          <span
-                            className="explorer-filename explorer-link"
-                            title="Open document"
-                            onClick={() => navigate(`/documents/${f.file_id}`)}
-                          >
-                            {f.filename}
-                          </span>
-                          {f.sheet_number && (
-                            <span className="muted">Sheet {f.sheet_number}</span>
-                          )}
-                          <StatusBadge status={f.status} />
-                          <span className="explorer-file-actions">
-                            <Button
-                              variant="subtle"
-                              size="compact-xs"
-                              onClick={() => navigate(`/documents/${f.file_id}`)}
+                        .map((f) => {
+                          const { context, distinct } = splitFilename(f.filename, d.dwg_number)
+                          return (
+                            <div
+                              key={f.file_id}
+                              className="explorer-file-row"
+                              title={f.filename}
                             >
-                              View
-                            </Button>
-                            <Button
-                              variant="subtle"
-                              size="compact-xs"
-                              onClick={() =>
-                                setRenamingFile({ file: f, name: f.filename })
-                              }
-                            >
-                              Rename
-                            </Button>
-                            <Button
-                              variant="subtle"
-                              size="compact-xs"
-                              onClick={() => setMovingFile({ file: f, target: null })}
-                            >
-                              Move
-                            </Button>
-                            <Button
-                              variant="subtle"
-                              size="compact-xs"
-                              onClick={() => handleDetachFile(f)}
-                            >
-                              Detach
-                            </Button>
-                            <Button
-                              variant="subtle"
-                              color="red"
-                              size="compact-xs"
-                              onClick={() => setDeletingFile(f)}
-                            >
-                              Delete
-                            </Button>
-                          </span>
-                        </div>
-                      ))}
+                              <span className="explorer-file-icon" aria-hidden="true">
+                                <IconFile size={15} />
+                              </span>
+                              <span className="explorer-file-main">
+                                <span
+                                  className="explorer-filename explorer-link"
+                                  onClick={() => navigate(`/documents/${f.file_id}`)}
+                                >
+                                  {context && <span className="muted">{context}</span>}
+                                  {distinct}
+                                </span>
+                                <span className="explorer-file-meta">
+                                  {f.sheet_number && <span>SHT {f.sheet_number}</span>}
+                                  <span>{f.file_type?.toUpperCase()}</span>
+                                </span>
+                                <StatusBadge status={f.status} />
+                              </span>
+                              <span className="explorer-file-actions">
+                                <Button
+                                  variant="subtle"
+                                  size="compact-xs"
+                                  onClick={() => navigate(`/documents/${f.file_id}`)}
+                                >
+                                  Open
+                                </Button>
+                                <Button
+                                  variant="subtle"
+                                  color="gray"
+                                  size="compact-xs"
+                                  onClick={() => setRenamingFile({ file: f, name: f.filename })}
+                                >
+                                  Rename
+                                </Button>
+                                <Button
+                                  variant="subtle"
+                                  color="gray"
+                                  size="compact-xs"
+                                  onClick={() => setMovingFile({ file: f, target: null })}
+                                >
+                                  Move
+                                </Button>
+                                <Button
+                                  variant="subtle"
+                                  color="gray"
+                                  size="compact-xs"
+                                  onClick={() => handleDetachFile(f)}
+                                >
+                                  Detach
+                                </Button>
+                                <Tooltip label="Delete file" withArrow position="left">
+                                  <ActionIcon
+                                    variant="subtle"
+                                    color="red"
+                                    size="sm"
+                                    aria-label={`Delete ${f.filename}`}
+                                    onClick={() => setDeletingFile(f)}
+                                  >
+                                    <IconTrash size={15} />
+                                  </ActionIcon>
+                                </Tooltip>
+                              </span>
+                            </div>
+                          )
+                        })}
                     </div>
                   )}
                 </div>

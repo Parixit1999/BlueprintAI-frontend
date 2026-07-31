@@ -1,4 +1,4 @@
-import { ActionIcon, Badge, Button, Select, TextInput, Tooltip } from '@mantine/core'
+import { ActionIcon, Badge, Button, Select, Text, TextInput, Tooltip } from '@mantine/core'
 import {
   IconPencil,
   IconPlus,
@@ -210,9 +210,29 @@ function AssistantMessage({ messageId, content, evidence, versionContext, feedba
         )}
         {sources.length > 0 && (
           <div className="sources">
+            {/* Citations are the point of the product, so opening one is a
+                single click on a numbered chip. The expandable list below
+                still carries the quoted text for anyone who wants it. */}
+            <div className="source-chips">
+              {sources.map((s, i) => (
+                <button
+                  key={i}
+                  className="source-chip"
+                  onClick={() => onOpenSource(s)}
+                  title={s.chunk_text ?? undefined}
+                >
+                  <span className="source-index">{i + 1}</span>
+                  <span className="source-chip-label">
+                    {s.region_type === 'registry'
+                      ? (s.label ?? 'registry')
+                      : (s.dwg_number ?? s.filename ?? s.region_type.replace('_', ' '))}
+                  </span>
+                </button>
+              ))}
+            </div>
             <button className="sources-toggle" onClick={() => setOpen((v) => !v)}>
               <span className={open ? 'caret open' : 'caret'}>▸</span>
-              {sources.length} source{sources.length > 1 ? 's' : ''}
+              {open ? 'Hide quoted text' : `Show quoted text from ${sources.length} source${sources.length > 1 ? 's' : ''}`}
             </button>
             {open && (
               <ol className="sources-list">
@@ -300,8 +320,17 @@ export default function Chat() {
     ]).catch((e) => toast.error(e.message))
   }
 
+  // Keep the newest message in view.
+  // Deferred a frame because, called synchronously after a session loads, the
+  // thread has not been laid out yet. Instant rather than smooth: animated
+  // scrolling is driven by the same rAF machinery that stalls in throttled and
+  // embedded webviews, where it silently no-ops and leaves the reader looking
+  // at the top of the conversation.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const frame = requestAnimationFrame(() =>
+      bottomRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' }),
+    )
+    return () => cancelAnimationFrame(frame)
   }, [messages, busy])
 
   async function handleRate(messageId, rating) {
@@ -487,6 +516,7 @@ export default function Chat() {
           searchable
         />
         <div className="session-list">
+          {sessions.length > 0 && <div className="session-group-label">Conversations</div>}
           {sessions.map((s) => (
             <SessionRow
               key={s.session_id}
@@ -499,7 +529,11 @@ export default function Chat() {
               onDelete={setPendingDelete}
             />
           ))}
-          {sessions.length === 0 && <p className="empty-note">No chats yet.</p>}
+          {sessions.length === 0 && (
+            <Text size="sm" c="dimmed" px="xs" py="sm">
+              No chats yet — ask a question to start one.
+            </Text>
+          )}
         </div>
       </aside>
 
@@ -507,11 +541,30 @@ export default function Chat() {
         <div className="chat-thread">
           {messages.length === 0 && !busy && (
             <div className="empty-state">
-              <p>Ask anything about your ingested drawings.</p>
+              <p>Ask anything about your ingested drawings</p>
               <p className="page-sub">
-                Answers cite their source regions — expand “Sources” to see each one highlighted on
-                the drawing.
+                Every answer cites the regions it came from — click a citation to see it
+                highlighted on the drawing itself.
               </p>
+              {/* Examples that fill the composer (they do not send) so an
+                  empty thread suggests what this can actually answer. */}
+              <div className="chat-starters">
+                {[
+                  'What material is specified for the mounting plate?',
+                  'List every drawing that mentions anchor bolts',
+                  'What is the scale on the foundation plan?',
+                  'Which sheets were revised most recently?',
+                ].map((q) => (
+                  <button
+                    key={q}
+                    type="button"
+                    className="chat-starter"
+                    onClick={() => setInput(q)}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           {messages.map((m) =>
@@ -570,12 +623,22 @@ export default function Chat() {
           </div>
         )}
         <form className="chat-input" onSubmit={send}>
-          <input
+          <TextInput
+            className="chat-input-field"
             value={input}
+            size="md"
+            radius="md"
             placeholder="Ask about your drawings — e.g. What material is the mounting plate?"
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => setInput(e.currentTarget.value)}
+            aria-label="Ask a question about your drawings"
           />
-          <Button type="submit" loading={busy} disabled={!input.trim()} rightSection={<IconSend size={16} />}>
+          <Button
+            type="submit"
+            size="md"
+            loading={busy}
+            disabled={!input.trim()}
+            rightSection={<IconSend size={16} />}
+          >
             Send
           </Button>
         </form>
@@ -599,7 +662,10 @@ export default function Chat() {
               “{sourceOpen.chunk_text}”
             </p>
             {(sourceOpen.dwg_number || sourceOpen.project_name || sourceOpen.filename) && (
-              <p className="evidence-score muted">
+              // div, not p: Mantine's Badge renders a div, and a div inside a
+              // p makes the browser close the paragraph early, splitting this
+              // line into two mis-styled blocks
+              <div className="evidence-score muted">
                 {sourceOpen.dwg_number && (
                   <Badge variant="light" size="sm" mr={6}>
                     {sourceOpen.dwg_number}
@@ -616,7 +682,7 @@ export default function Chat() {
                 ]
                   .filter(Boolean)
                   .join(' · ')}
-              </p>
+              </div>
             )}
             <p className="evidence-score muted">Relevance score {sourceOpen.score}</p>
             {sourceOpen.source_file_id ? (

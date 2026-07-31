@@ -1,6 +1,19 @@
-import { Button, Pagination } from '@mantine/core'
-import { IconDatabaseImport, IconUpload } from '@tabler/icons-react'
-import { useEffect, useMemo, useState } from 'react'
+import {
+  ActionIcon,
+  Button,
+  Checkbox,
+  Pagination,
+  Select,
+  TextInput,
+  Tooltip,
+} from '@mantine/core'
+import {
+  IconDatabaseImport,
+  IconSearch,
+  IconTrash,
+  IconUpload,
+} from '@tabler/icons-react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { confirmAndIngest, deleteFile, listFilesPaged, retryExtraction } from '../api'
 import AssignModal from '../components/AssignModal'
@@ -255,11 +268,11 @@ export default function Documents() {
           <table className="table-fixed">
               <colgroup>
                 <col />
-                <col style={{ width: 200 }} />
-                <col style={{ width: 64 }} />
-                <col style={{ width: 118 }} />
-                <col style={{ width: 112 }} />
-                <col style={{ width: 254 }} />
+                <col style={{ width: 180 }} />
+                <col style={{ width: 74 }} />
+                <col style={{ width: 170 }} />
+                <col style={{ width: 104 }} />
+                <col style={{ width: 186 }} />
               </colgroup>
 
             <thead>
@@ -287,37 +300,58 @@ export default function Documents() {
         </div>
       ) : (
         <>
+          {/* Filters use the same controls as the rest of the app so the page
+              reads as one surface; state and handlers are unchanged. */}
           <div className="filters">
-            <input
-              className="search"
+            <TextInput
               placeholder="Search by name…"
               value={query}
-              onChange={(e) => setFilter('q', e.target.value)}
+              onChange={(e) => setFilter('q', e.currentTarget.value)}
+              leftSection={<IconSearch size={16} />}
+              size="sm"
+              w={280}
             />
-            <select value={typeFilter} onChange={(e) => setFilter('type', e.target.value)}>
-              <option value="all">All types</option>
-              {types.map((t) => (
-                <option key={t} value={t}>
-                  {t.toUpperCase()}
-                </option>
-              ))}
-            </select>
-            <select value={statusFilter} onChange={(e) => setFilter('status', e.target.value)}>
-              {STATUS_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-            <select value={assignedFilter} onChange={(e) => setFilter('assigned', e.target.value)}>
-              <option value="all">All assignments</option>
-              <option value="yes">Assigned</option>
-              <option value="no">Unassigned</option>
-            </select>
-            <label className="dup-toggle">
-              <input type="checkbox" checked={dupOnly} onChange={(e) => setFilter('dup', e.target.checked)} />
-              Duplicates only
-            </label>
+            <Select
+              size="sm"
+              w={128}
+              aria-label="Filter by file type"
+              value={typeFilter}
+              onChange={(v) => setFilter('type', v ?? 'all')}
+              allowDeselect={false}
+              data={[
+                { value: 'all', label: 'All types' },
+                ...types.map((t) => ({ value: t, label: t.toUpperCase() })),
+              ]}
+            />
+            <Select
+              size="sm"
+              w={158}
+              aria-label="Filter by status"
+              value={statusFilter}
+              onChange={(v) => setFilter('status', v ?? 'all')}
+              allowDeselect={false}
+              data={STATUS_OPTIONS}
+            />
+            <Select
+              size="sm"
+              w={158}
+              aria-label="Filter by assignment"
+              value={assignedFilter}
+              onChange={(v) => setFilter('assigned', v ?? 'all')}
+              allowDeselect={false}
+              data={[
+                { value: 'all', label: 'All assignments' },
+                { value: 'yes', label: 'Assigned' },
+                { value: 'no', label: 'Unassigned' },
+              ]}
+            />
+            <Checkbox
+              size="sm"
+              label="Duplicates only"
+              checked={dupOnly}
+              onChange={(e) => setFilter('dup', e.currentTarget.checked)}
+              styles={{ label: { fontSize: 'var(--fs-sm)', color: 'var(--ink-2)' } }}
+            />
             <span className="filter-count">
               {totalFiltered} of {grandTotal}
             </span>
@@ -327,11 +361,11 @@ export default function Documents() {
             <table className="table-fixed">
               <colgroup>
                 <col />
-                <col style={{ width: 200 }} />
-                <col style={{ width: 64 }} />
-                <col style={{ width: 118 }} />
-                <col style={{ width: 112 }} />
-                <col style={{ width: 254 }} />
+                <col style={{ width: 180 }} />
+                <col style={{ width: 74 }} />
+                <col style={{ width: 170 }} />
+                <col style={{ width: 104 }} />
+                <col style={{ width: 186 }} />
               </colgroup>
 
               <thead>
@@ -360,59 +394,76 @@ export default function Documents() {
                   return (
                   <tr key={f.file_id} onClick={() => navigate(`/documents/${f.file_id}`)}>
                     <td className="cell-name">
-                      <div className="name-cell">
-                        <span>{f.filename}</span>
-                        {f.is_drawing === false && (
-                          <span
-                            className="dup-tag not-drawing-tag"
-                            title="The AI judged this image is not an engineering drawing — check it before ingesting."
-                          >
-                            Not a drawing
-                          </span>
-                        )}
-                        {f.is_duplicate && (
-                          <span
-                            className="dup-tag"
-                            title={
-                              match
-                                ? `${Math.round(match.similarity * 100)}% similar to ${match.filename}`
-                                : 'Possible duplicate'
-                            }
-                          >
-                            Possible duplicate
-                          </span>
-                        )}
+                      {/* The name owns its own line at full column width; tags
+                          sit on the meta row below. Sharing one flex row made
+                          long filenames collapse into a vertical rope of
+                          characters and clipped the tag text. */}
+                      <div className="name-primary" title={f.filename}>
+                        {f.filename}
                       </div>
-                      {match && (
-                        <div className="dup-match">
-                          {Math.round(match.similarity * 100)}% similar to {match.filename}
+                      {(f.is_drawing === false || f.is_duplicate || match) && (
+                        <div className="name-meta">
+                          {f.is_drawing === false && (
+                            <span
+                              className="dup-tag not-drawing-tag"
+                              title="The AI judged this image is not an engineering drawing — check it before ingesting."
+                            >
+                              Not a drawing
+                            </span>
+                          )}
+                          {f.is_duplicate && (
+                            <span
+                              className="dup-tag"
+                              title={
+                                match
+                                  ? `${Math.round(match.similarity * 100)}% similar to ${match.filename}`
+                                  : 'Possible duplicate'
+                              }
+                            >
+                              Possible duplicate
+                            </span>
+                          )}
+                          {match && (
+                            <span className="dup-match" title={match.filename}>
+                              {Math.round(match.similarity * 100)}% similar to {match.filename}
+                            </span>
+                          )}
                         </div>
                       )}
                       {f.status === 'failed' && f.error && (
-                        <div className="error-match">{f.error}</div>
+                        <div className="error-match" title={f.error}>
+                          {f.error}
+                        </div>
                       )}
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       {f.drawing_id ? (
-                        <>
-                          <Button
-                            variant="light"
-                            size="compact-xs"
+                        // drawing number leads, project name is context under
+                        // it - both truncate independently instead of one long
+                        // label being cut mid-word
+                        <div className="assign-cell">
+                          <button
+                            className="assign-dwg"
+                            title={`Open drawing ${f.dwg_number ?? ''}`}
                             onClick={() => navigate(`/drawings/${f.drawing_id}`)}
                           >
                             {f.dwg_number ?? 'Drawing'}
-                            {f.project_name ? ` · ${f.project_name}` : ''}
-                          </Button>
-                          {f.auto_assigned && (
-                            <span
-                              className="dup-tag"
-                              style={{ marginLeft: 6 }}
-                              title="Assigned automatically from an exact drawing-number match"
-                            >
-                              auto
+                          </button>
+                          {(f.project_name || f.auto_assigned) && (
+                            <span className="assign-project">
+                              {f.project_name}
+                              {f.auto_assigned && (
+                                <span
+                                  className="auto-tag"
+                                  style={{ marginLeft: f.project_name ? 6 : 0 }}
+                                  title="Assigned automatically from an exact drawing-number match"
+                                >
+                                  auto
+                                </span>
+                              )}
                             </span>
                           )}
-                        </>
+                        </div>
                       ) : (
                         <span className="muted">—</span>
                       )}
@@ -431,12 +482,14 @@ export default function Documents() {
                       {new Date(f.created_at).toLocaleDateString()}
                     </td>
                     <td className="cell-action" onClick={(e) => e.stopPropagation()}>
-                      {/* Fixed slots so actions line up in columns across rows */}
-                      <div className="action-grid">
-                        <span>
+                      {/* The action that moves the document forward is the
+                          visible one; rare and destructive actions live in the
+                          overflow menu so a mis-click can't delete a drawing. */}
+                      <div className="action-row">
+                        <span className="action-slot">
                           {!f.drawing_id && f.status !== 'failed' && (
                             <Button
-                              variant="subtle"
+                              variant="light"
                               color="grape"
                               size="compact-xs"
                               onClick={() => setAssigning(f)}
@@ -444,11 +497,9 @@ export default function Documents() {
                               Assign
                             </Button>
                           )}
-                        </span>
-                        <span>
                           {f.is_duplicate && (
                             <Button
-                              variant="subtle"
+                              variant="light"
                               color="orange"
                               size="compact-xs"
                               onClick={() => setComparing(f)}
@@ -457,10 +508,10 @@ export default function Documents() {
                             </Button>
                           )}
                         </span>
-                        <span>
+                        <span className="action-slot">
                           {f.status === 'failed' ? (
                             <Button
-                              variant="subtle"
+                              variant="light"
                               size="compact-xs"
                               loading={retryingId === f.file_id}
                               onClick={() => handleRetry(f)}
@@ -469,7 +520,7 @@ export default function Documents() {
                             </Button>
                           ) : (
                             <Button
-                              variant="subtle"
+                              variant={f.status === 'extracted' ? 'filled' : 'default'}
                               size="compact-xs"
                               onClick={() => navigate(`/documents/${f.file_id}`)}
                             >
@@ -477,16 +528,20 @@ export default function Documents() {
                             </Button>
                           )}
                         </span>
-                        <span>
-                          <Button
+                        {/* icon rather than a text button: same single click,
+                            but it frees the width that was clipping this
+                            column, and reads as secondary to Review/View */}
+                        <Tooltip label="Delete document" withArrow position="left">
+                          <ActionIcon
                             variant="subtle"
                             color="red"
-                            size="compact-xs"
+                            size="sm"
+                            aria-label={`Delete ${f.filename}`}
                             onClick={() => setPendingDelete(f)}
                           >
-                            Delete
-                          </Button>
-                        </span>
+                            <IconTrash size={15} />
+                          </ActionIcon>
+                        </Tooltip>
                       </div>
                     </td>
                   </tr>
@@ -530,7 +585,10 @@ export default function Documents() {
       {comparing && (
         <CompareModal
           file={comparing}
-          allFiles={files ?? []}
+          // `files` is the paged response object, not a list - passing it
+          // whole made CompareModal call .find on an object and white-screen
+          // the page. `items` is that response's array of documents.
+          allFiles={items}
           onClose={() => setComparing(null)}
           onDeleted={() => {
             setComparing(null)
