@@ -18,6 +18,7 @@ import {
   IconExclamationCircle,
   IconFile,
   IconFileZip,
+  IconFolder,
   IconTrash,
   IconUpload,
   IconX,
@@ -114,47 +115,52 @@ export default function Upload() {
         }
       />
 
-      <Dropzone
-        onDrop={handleDrop}
-        loading={expanding}
-        multiple
-        radius="lg"
-        p="xl"
-        maw={560}
-        mx="auto"
-      >{/* No `accept` filter: DXF has no reliable MIME type, and mixing bare
-          MIME types with extensions makes the native file dialog grey out every
-          file. We validate the extension in handleDrop and the backend rejects
-          anything unsupported with a clear error. */}
-        <Stack justify="center" align="center" gap="md" mih={340} style={{ pointerEvents: 'none' }}>
-          <Dropzone.Accept>
-            <ThemeIcon size={72} radius="lg" variant="light" color="brand">
-              <IconUpload size={40} />
-            </ThemeIcon>
-          </Dropzone.Accept>
-          <Dropzone.Reject>
-            <ThemeIcon size={72} radius="lg" variant="light" color="red">
-              <IconX size={40} />
-            </ThemeIcon>
-          </Dropzone.Reject>
-          <Dropzone.Idle>
-            <ThemeIcon size={72} radius="lg" variant="light" color="brand">
-              <IconCloudUpload size={40} />
-            </ThemeIcon>
-          </Dropzone.Idle>
-          <Box ta="center">
-            <Text size="lg" fw={600}>
-              Drag drawings here or click to browse
-            </Text>
-            <Text size="sm" c="dimmed" mt={4}>
-              DXF, DWG, RVT, PDF, PNG, JPG, TIFF, HEIC — or a ZIP of drawings. Multiple files supported.
-            </Text>
-          </Box>
-        </Stack>
-      </Dropzone>
+      {/* Two columns: the drop target and its queue on the left, orientation
+          on the right. The single centred dropzone left most of the page
+          empty and said nothing about what happens after a drop. */}
+      <div className="upload-grid">
+        <div>
+          <Dropzone onDrop={handleDrop} loading={expanding} multiple radius="lg" p="xl">
+            {/* No `accept` filter: DXF has no reliable MIME type, and mixing bare
+                MIME types with extensions makes the native file dialog grey out every
+                file. We validate the extension in handleDrop and the backend rejects
+                anything unsupported with a clear error. */}
+            <div className="dropzone-inner" style={{ minHeight: 250 }}>
+              <Dropzone.Accept>
+                <ThemeIcon size={64} radius="lg" variant="light" color="brand">
+                  <IconUpload size={32} />
+                </ThemeIcon>
+              </Dropzone.Accept>
+              <Dropzone.Reject>
+                <ThemeIcon size={64} radius="lg" variant="light" color="red">
+                  <IconX size={32} />
+                </ThemeIcon>
+              </Dropzone.Reject>
+              <Dropzone.Idle>
+                <ThemeIcon size={64} radius="lg" variant="light" color="brand">
+                  <IconCloudUpload size={32} />
+                </ThemeIcon>
+              </Dropzone.Idle>
+              <Box ta="center">
+                <Text fz="var(--fs-h2)" fw={650} style={{ letterSpacing: '-0.014em' }}>
+                  Drag drawings here, or click to browse
+                </Text>
+                <Text size="sm" c="dimmed" mt={4}>
+                  Drop as many as you like — or a .zip archive for a bulk import.
+                </Text>
+              </Box>
+              <div className="dropzone-formats">
+                {['dxf', 'dwg', 'rvt', 'pdf', 'png', 'jpg', 'tiff', 'heic', 'zip'].map((f) => (
+                  <span className="format-chip" key={f}>
+                    {f}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </Dropzone>
 
       {total > 0 && (
-        <Paper withBorder radius="md" mt="lg" p="md" maw={560} mx="auto">
+        <Paper withBorder radius="lg" mt="md" p="md">
           <Group justify="space-between" mb="sm">
             <Group gap="xs">
               <Text fw={600}>Import progress</Text>
@@ -183,33 +189,29 @@ export default function Upload() {
             {items.map((item) => {
               const s = STATUS[item.status]
               return (
-                <Group
+                <div
                   key={item.id}
-                  justify="space-between"
-                  align="flex-start"
-                  wrap="nowrap"
-                  px="sm"
-                  py={8}
-                  style={{ border: '1px solid var(--mantine-color-gray-2)', borderRadius: 8 }}
+                  className={`queue-row${item.status === 'error' ? ' is-error' : ''}${
+                    item.status === 'done' ? ' is-done' : ''
+                  }`}
                 >
-                  <Group gap="sm" wrap="nowrap" align="flex-start" style={{ minWidth: 0, flex: 1 }}>
-                    <ThemeIcon variant="light" color={s.color} size="md" radius="md">
-                      {item.status === 'done' ? (
-                        <IconCheck size={16} />
-                      ) : item.status === 'error' ? (
-                        <IconExclamationCircle size={16} />
-                      ) : item.status === 'uploading' || item.status === 'processing' ? (
-                        <Loader size={14} color={s.color} />
-                      ) : item.source ? (
-                        <IconFileZip size={16} />
-                      ) : (
-                        <IconFile size={16} />
-                      )}
-                    </ThemeIcon>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <Text size="sm" fw={500} truncate>
+                  <ThemeIcon variant="light" color={s.color} size="md" radius="md">
+                    {item.status === 'done' ? (
+                      <IconCheck size={16} />
+                    ) : item.status === 'error' ? (
+                      <IconExclamationCircle size={16} />
+                    ) : item.status === 'uploading' || item.status === 'processing' ? (
+                      <Loader size={14} color={s.color} />
+                    ) : item.source ? (
+                      <IconFileZip size={16} />
+                    ) : (
+                      <IconFile size={16} />
+                    )}
+                  </ThemeIcon>
+                  <div className="queue-main">
+                      <div className="queue-name" title={item.name}>
                         {item.name}
-                      </Text>
+                      </div>
                       {item.status === 'error' ? (
                         <Text size="xs" c="red.7" style={{ lineHeight: 1.4 }}>
                           {item.error}
@@ -302,9 +304,8 @@ export default function Upload() {
                         }
                         return null
                       })()}
-                    </div>
-                  </Group>
-                  <Group gap="xs" wrap="nowrap">
+                  </div>
+                  <div className="queue-actions">
                     <Badge variant="light" color={s.color} size="sm">
                       {s.label}
                     </Badge>
@@ -346,8 +347,8 @@ export default function Upload() {
                         <IconTrash size={15} />
                       </ActionIcon>
                     )}
-                  </Group>
-                </Group>
+                  </div>
+                </div>
               )
             })}
           </Stack>
@@ -359,6 +360,74 @@ export default function Upload() {
           )}
         </Paper>
       )}
+        </div>
+
+        {/* Orientation column: what the pipeline will do with these files, and
+            where they will land. Previously this was all dead space. */}
+        <Stack gap="md">
+          {(scopeDrawingId || scopeProjectId) && (
+            <Paper withBorder radius="lg" p="md">
+              <Text
+                fz="var(--fs-micro)"
+                tt="uppercase"
+                fw={650}
+                c="dimmed"
+                style={{ letterSpacing: '0.06em' }}
+              >
+                Filing destination
+              </Text>
+              <Group gap="xs" mt={8} wrap="nowrap">
+                <ThemeIcon variant="light" color="brand" size="md" radius="md">
+                  {scopeDrawingId ? <IconFile size={16} /> : <IconFolder size={16} />}
+                </ThemeIcon>
+                <Text size="sm" fw={600} style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+                  {scopeDrawingId
+                    ? (scopeDrawingName ?? 'this drawing')
+                    : (scopeProjectName ?? 'this project')}
+                </Text>
+              </Group>
+              <Text size="xs" c="dimmed" mt={8}>
+                {scopeDrawingId
+                  ? 'Files attach straight to this drawing — no assignment step.'
+                  : 'Each file is filed into this project as a new drawing.'}
+              </Text>
+            </Paper>
+          )}
+
+          <Paper withBorder radius="lg" p="md">
+            <Text fw={650} mb="sm">
+              What happens after you drop
+            </Text>
+            <div className="upload-steps">
+              <div className="upload-step">
+                <span>
+                  <strong>Upload</strong>
+                  Files transfer with live progress. ZIP archives are unpacked in your
+                  browser.
+                </span>
+              </div>
+              <div className="upload-step">
+                <span>
+                  <strong>Extract</strong>
+                  CAD geometry is parsed; PDFs and photos are read with the vision model.
+                  Large scans can take a few minutes.
+                </span>
+              </div>
+              <div className="upload-step">
+                <span>
+                  <strong>File and review</strong>
+                  Drawing and project numbers in the name are matched to the registry, then
+                  you confirm the extracted regions.
+                </span>
+              </div>
+            </div>
+            <Text size="xs" c="dimmed" mt="md">
+              You can leave this page — uploads keep running and stay visible from anywhere
+              in the app.
+            </Text>
+          </Paper>
+        </Stack>
+      </div>
     </Box>
   )
 }

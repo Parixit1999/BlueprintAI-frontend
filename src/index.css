@@ -1,29 +1,118 @@
-/* BlueprintAI design tokens - neutral inks + blue accent, light theme */
+/* ==========================================================================
+   BlueprintAI design tokens
+
+   The visual language is "the drafting table": blueprint navy as the
+   structural colour, a calibrated ink scale for text, and a monospace
+   channel reserved for technical identifiers (DWG numbers, contract
+   numbers, dates, counts) so registry data reads like registry data.
+
+   Fonts are deliberately system-stack only - no webfont request. This is a
+   dense internal tool served from S3/CloudFront; a network font would add a
+   render-blocking dependency and a FOUT that shifts every table in the app.
+   Character comes from the type scale and the mono channel, not the family.
+   ========================================================================== */
 :root {
-  --page: #f9f9f7;
-  --surface: #fcfcfb;
-  --ink: #0b0b0b;
-  --ink-2: #52514e;
-  --muted: #898781;
-  --hairline: #e1e0d9;
-  --border: rgba(11, 11, 11, 0.1);
+  /* ---- surfaces ---- */
+  --page: #f5f7f9;
+  --surface: #ffffff;
+  --surface-2: #fafbfc;
+  --surface-sunken: #eef1f5;
+
+  /* ---- ink scale ---- */
+  --ink: #101820;
+  --ink-2: #3d4a58;
+  --muted: #6b7885;
+  --ink-faint: #93a0ad;
+
+  /* ---- lines ---- */
+  --hairline: #e4e9ef;
+  --hairline-strong: #d3dae2;
+  --border: #e4e9ef;
+
+  /* ---- brand: blueprint blue ---- */
   --accent: #2a78d6;
   --accent-strong: #1c5cab;
+  --accent-text: #1a5aa8; /* AA-safe for body-size links on white */
   --accent-wash: #eaf2fc;
-  --good: #0ca30c;
-  --good-text: #006300;
-  --warning: #fab219;
-  --warning-text: #8a5b00;
-  --critical: #d03b3b;
-  --critical-text: #a32222;
-  --sidebar-bg: #1a1a19;
-  --sidebar-ink: #ffffff;
-  --sidebar-ink-2: #c3c2b7;
-  --radius: 10px;
-  --shadow: 0 1px 2px rgba(11, 11, 11, 0.05), 0 4px 16px rgba(11, 11, 11, 0.06);
+  --accent-wash-2: #dbe9fa;
+
+  /* ---- structural navy (sidebar, login, headers) ---- */
+  --navy: #10263d;
+  --navy-2: #16324e;
+  --navy-ink: #ffffff;
+  --navy-ink-2: #9db1c6;
+  --navy-line: rgba(255, 255, 255, 0.1);
+
+  /* ---- status ---- */
+  --good: #0f7d4d;
+  --good-text: #0b6640;
+  --good-wash: #e6f5ee;
+  --warning: #c07800;
+  --warning-text: #8a5600;
+  --warning-wash: #fdf3e2;
+  --critical: #c93a2f;
+  --critical-text: #a52c23;
+  --critical-wash: #fdecea;
+  --info-wash: #eaf2fc;
+
+  /* legacy aliases kept so existing rules resolve */
+  --sidebar-bg: var(--navy);
+  --sidebar-ink: var(--navy-ink);
+  --sidebar-ink-2: var(--navy-ink-2);
+
+  /* ---- type ---- */
+  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas,
+    'Liberation Mono', monospace;
+
+  --fs-display: 1.75rem; /* 28 */
+  --fs-h1: 1.375rem; /* 22 */
+  --fs-h2: 1rem; /* 16 */
+  --fs-h3: 0.875rem; /* 14 */
+  --fs-body: 0.875rem; /* 14 */
+  --fs-sm: 0.8125rem; /* 13 */
+  --fs-xs: 0.75rem; /* 12 */
+  --fs-micro: 0.6875rem; /* 11 */
+
+  --lh-tight: 1.22;
+  --lh-snug: 1.35;
+  --lh-body: 1.55;
+
+  /* ---- space ---- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+
+  /* ---- radius ---- */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-pill: 999px;
+  --radius: var(--r-md); /* legacy alias */
+
+  /* ---- elevation ---- */
+  --shadow-sm: 0 1px 2px rgba(16, 24, 32, 0.05);
+  --shadow: 0 1px 2px rgba(16, 24, 32, 0.05), 0 2px 8px rgba(16, 24, 32, 0.05);
+  --shadow-md: 0 2px 4px rgba(16, 24, 32, 0.05), 0 8px 24px rgba(16, 24, 32, 0.08);
+  --shadow-lg: 0 12px 40px rgba(16, 24, 32, 0.16);
+  --ring: 0 0 0 3px var(--accent-wash-2);
+
+  /* ---- motion ---- */
+  --dur-1: 110ms;
+  --dur-2: 170ms;
+  --dur-3: 240ms;
+  --ease: cubic-bezier(0.32, 0.72, 0.3, 1);
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -35,19 +124,30 @@ body,
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
   color: var(--ink);
   background: var(--page);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 h1,
 h2,
-h3 {
+h3,
+h4 {
   margin: 0;
   font-weight: 650;
+  line-height: var(--lh-snug);
+  letter-spacing: -0.011em;
+}
+
+h1 {
+  font-size: var(--fs-h1);
+  line-height: var(--lh-tight);
+  letter-spacing: -0.018em;
 }
 
 p {
@@ -59,6 +159,60 @@ button {
   cursor: pointer;
 }
 
-input {
+input,
+select,
+textarea {
   font: inherit;
+}
+
+/* Every number in this app is data - align it in columns by default. */
+table,
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Visible, consistent focus ring for keyboard users across native and
+   Mantine controls. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+::selection {
+  background: var(--accent-wash-2);
+}
+
+/* Scrollbars: present but quiet, so dense panels don't read as noisy. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--hairline-strong);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: var(--r-pill);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-faint);
+  background-clip: content-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -122,6 +122,9 @@ export default function AssignModal({ file, onClose, onAssigned }) {
                       color="yellow"
                       variant="filled"
                       loading={busy}
+                      // the label must never be the thing that shrinks - the
+                      // description beside it truncates instead
+                      style={{ flexShrink: 0 }}
                       onClick={() =>
                         doAssign(
                           { version_of: v.drawing_id },
@@ -173,6 +176,7 @@ export default function AssignModal({ file, onClose, onAssigned }) {
                     <Button
                       size="compact-sm"
                       loading={busy}
+                      style={{ flexShrink: 0 }}
                       onClick={() =>
                         doAssign(
                           { drawing_id: s.drawing_id },
@@ -225,6 +229,7 @@ export default function AssignModal({ file, onClose, onAssigned }) {
                       size="compact-sm"
                       variant="light"
                       loading={busy}
+                      style={{ flexShrink: 0 }}
                       onClick={() =>
                         doAssign(
                           { new_drawing: newDrawing(s.project_id) },

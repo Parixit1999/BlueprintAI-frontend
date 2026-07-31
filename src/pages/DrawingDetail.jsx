@@ -200,7 +200,15 @@ export default function DrawingDetail() {
       />
 
       <Group align="flex-start" gap="lg" wrap="wrap">
-        <Paper withBorder radius="md" p="md" style={{ flex: '1 1 340px', maxWidth: 480 }}>
+        {/* minWidth 0: a flex item defaults to min-width:auto, which refuses
+            to shrink below its content and pushed this two-column layout
+            wider than a phone screen */}
+        <Paper
+          withBorder
+          radius="lg"
+          p="md"
+          style={{ flex: '1 1 340px', maxWidth: 480, minWidth: 0 }}
+        >
           <Text fw={600} mb="sm">
             Metadata
           </Text>
@@ -262,7 +270,7 @@ export default function DrawingDetail() {
           </form>
         </Paper>
 
-        <Stack style={{ flex: '1 1 380px' }} gap="lg">
+        <Stack style={{ flex: '1 1 380px', minWidth: 0 }} gap="lg">
           <Paper withBorder radius="md" p="md">
             <Group justify="space-between" mb="sm">
               <Text fw={600}>Files ({drawing.files.length})</Text>

@@ -42,12 +42,25 @@ export default function PageHeader({
   }
 
   const heading = (
-    <Box ta={align}>
-      <Title order={2} fz={24} fw={650} lh={1.25}>
+    <Box ta={align} style={{ minWidth: 0 }}>
+      <Title
+        order={2}
+        fz="var(--fs-display)"
+        fw={650}
+        lh="var(--lh-tight)"
+        style={{ letterSpacing: '-0.022em', overflowWrap: 'anywhere' }}
+      >
         {title}
       </Title>
       {description && (
-        <Text c="dimmed" size="sm" mt={4} maw={640} mx={align === 'center' ? 'auto' : undefined}>
+        <Text
+          c="dimmed"
+          size="sm"
+          mt={6}
+          maw={640}
+          lh={1.5}
+          mx={align === 'center' ? 'auto' : undefined}
+        >
           {description}
         </Text>
       )}
@@ -74,9 +87,14 @@ export default function PageHeader({
     return <Box mb={mb}>{heading}</Box>
   }
   return (
-    <Group justify="space-between" align="flex-start" wrap="nowrap" gap="lg" mb={mb}>
+    // wrap (not nowrap): a long title plus four actions must reflow onto a
+    // second line rather than push the buttons off the edge of the page
+    <Group justify="space-between" align="flex-start" wrap="wrap" gap="md" mb={mb}>
       {heading}
-      <Group gap="sm" style={{ flexShrink: 0 }}>
+      {/* No flex-shrink pin here: it held the action row at its natural width
+          so it could never wrap, and on a phone the last button was cut off
+          the side of the screen. Letting it shrink lets the buttons reflow. */}
+      <Group gap="xs" justify="flex-end" wrap="wrap">
         {refreshButton}
         {actions}
       </Group>

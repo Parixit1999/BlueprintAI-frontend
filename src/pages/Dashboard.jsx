@@ -178,7 +178,7 @@ export default function Dashboard() {
           value={stats.questions_asked}
           hint={
             rated > 0
-              ? `${stats.chat_sessions} sessions · ${stats.feedback_helpful} 👍 ${stats.feedback_unhelpful} 👎`
+              ? `${stats.chat_sessions} sessions · ${stats.feedback_helpful} helpful · ${stats.feedback_unhelpful} not`
               : `${stats.chat_sessions} chat sessions`
           }
           to="/chat"
