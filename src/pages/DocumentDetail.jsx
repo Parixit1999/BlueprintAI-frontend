@@ -218,7 +218,7 @@ export default function DocumentDetail() {
       // server-side in the background; the status poll flips to 'ingested'
       await confirmAndIngest(fileId, corrections, [...rejected])
       toast.success(
-        'Adding to the knowledge base — this continues in the background' +
+        'Adding to the knowledge base - this continues in the background' +
           (Object.keys(corrections).length ? ` with ${Object.keys(corrections).length} correction(s)` : '') +
           (rejected.size ? `, ${rejected.size} rejected` : '') +
           '.',
@@ -245,7 +245,7 @@ export default function DocumentDetail() {
       setEdits({})
       setRejected(new Set())
       setFocused(null)
-      toast.success('Re-reading the drawing in the background — this page will update itself.')
+      toast.success('Re-reading the drawing in the background - this page will update itself.')
     } catch (e) {
       toast.error(e.message)
     } finally {
@@ -286,7 +286,7 @@ export default function DocumentDetail() {
           reviewing
             ? 'Verify each region against the drawing. Click a region to highlight it; correct or reject anything wrong, then confirm.'
             : ingesting
-              ? 'Adding this document to the knowledge base — this can take a few minutes for large drawings. You can leave this page; we’ll keep working in the background.'
+              ? 'Adding this document to the knowledge base - this can take a few minutes for large drawings. You can leave this page; we’ll keep working in the background.'
               : undefined
         }
         actions={
@@ -318,7 +318,7 @@ export default function DocumentDetail() {
                 variant="default"
                 loading={reextracting}
                 onClick={handleReextract}
-                title="Re-read this drawing with the current AI models — useful after model upgrades. You review the regions again before they replace the knowledge base entries."
+                title="Re-read this drawing with the current AI models - useful after model upgrades. You review the regions again before they replace the knowledge base entries."
               >
                 Re-extract with latest AI
               </Button>
@@ -346,7 +346,7 @@ export default function DocumentDetail() {
         <div className="notice">
           <span className="notice-icon">!</span>
           <span>
-            The AI judged that this image is <strong>not an engineering drawing</strong> — see
+            The AI judged that this image is <strong>not an engineering drawing</strong> - see
             its summary for what it appears to be. If it was uploaded by mistake, delete it;
             ingesting it would add non-drawing content to the knowledge base.
           </span>
@@ -393,7 +393,7 @@ export default function DocumentDetail() {
                   <div className="key-info-sub">
                     Document overview
                     <Tooltip
-                      label="Written by AI from all sheet summaries — not text printed on the drawing."
+                      label="Written by AI from all sheet summaries - not text printed on the drawing."
                       maw={300}
                       multiline
                       withArrow
@@ -409,7 +409,7 @@ export default function DocumentDetail() {
                   <div className="key-info-sub">
                     {pageCount > 1 ? `Sheet ${currentPage} summary` : 'Summary'}
                     <Tooltip
-                      label="Written by AI from the drawing image — not text printed on the drawing."
+                      label="Written by AI from the drawing image - not text printed on the drawing."
                       maw={300}
                       multiline
                       withArrow
@@ -440,8 +440,8 @@ export default function DocumentDetail() {
                           title={`View sheet ${s.page}`}
                         >
                           <td>{s.page}</td>
-                          <td>{s.dwg ?? <span className="muted">—</span>}</td>
-                          <td>{s.sheet ?? <span className="muted">—</span>}</td>
+                          <td>{s.dwg ?? <span className="muted">-</span>}</td>
+                          <td>{s.sheet ?? <span className="muted">-</span>}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -451,7 +451,7 @@ export default function DocumentDetail() {
               {sheetTitleChunks.length > 0 && (
                 <>
                   <div className="key-info-sub">
-                    {pageCount > 1 ? `Title block — sheet ${currentPage}` : 'Title block'}
+                    {pageCount > 1 ? `Title block - sheet ${currentPage}` : 'Title block'}
                   </div>
                   {sheetTitleChunks.map(({ c, i }) => (
                     <p
@@ -564,7 +564,7 @@ export default function DocumentDetail() {
                 <span className="region">{c.region_type.replace('_', ' ')}</span>
                 {c.region_type === 'summary' && (
                   <Tooltip
-                    label="Written by AI from the drawing image — not text printed on the drawing. Review and edit it like any other region."
+                    label="Written by AI from the drawing image - not text printed on the drawing. Review and edit it like any other region."
                     maw={300}
                     multiline
                     withArrow
@@ -597,7 +597,7 @@ export default function DocumentDetail() {
                   minRows={1}
                   maxRows={10}
                   value={edits[i] ?? c.chunk_text ?? ''}
-                  placeholder="(unreadable — type the correct value or reject)"
+                  placeholder="(unreadable - type the correct value or reject)"
                   disabled={rejected.has(i)}
                   onChange={(e) => setEdits({ ...edits, [i]: e.target.value })}
                 />

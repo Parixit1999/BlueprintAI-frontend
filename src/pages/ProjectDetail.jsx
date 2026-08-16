@@ -148,7 +148,7 @@ export default function ProjectDetail() {
   async function handleDetachFile(file) {
     try {
       await unassignFile(file.file_id)
-      toast.success('File detached — find it under Documents to reassign.')
+      toast.success('File detached - find it under Documents to reassign.')
       refresh()
     } catch (e) {
       toast.error(e.message)
@@ -268,7 +268,7 @@ export default function ProjectDetail() {
     try {
       await deleteProject(projectId)
       toast.success('Project deleted.')
-      navigate('/projects')
+      navigate('/registry')
     } catch (err) {
       toast.error(err.message)
       setDeleting(false)
@@ -285,10 +285,10 @@ export default function ProjectDetail() {
         color="gray"
         size="compact-sm"
         leftSection={<IconArrowLeft size={16} />}
-        onClick={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/projects'))}
+        onClick={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/registry'))}
         mb="xs"
       >
-        Projects
+        Number Book
       </Button>
       <PageHeader
         onRefresh={refresh}
@@ -296,7 +296,7 @@ export default function ProjectDetail() {
         description={
           [project.number ? `Project #${project.number}` : null, project.description]
             .filter(Boolean)
-            .join(' — ') || undefined
+            .join(' - ') || undefined
         }
         actions={
           <Group gap="xs">
@@ -368,7 +368,7 @@ export default function ProjectDetail() {
         <div className="empty-state">
           <p>No drawings in this project yet.</p>
           <p className="page-sub">
-            Add a drawing manually, or upload files — they can be assigned here with
+            Add a drawing manually, or upload files - they can be assigned here with
             automatic name matching.
           </p>
         </div>
@@ -422,7 +422,7 @@ export default function ProjectDetail() {
               </div>
               {group.drawings.length === 0 && (
                 <p className="empty-note explorer-empty">
-                  No drawings in this set yet — open a drawing and pick this set in its
+                  No drawings in this set yet - open a drawing and pick this set in its
                   “Drawing set” field.
                 </p>
               )}
@@ -606,7 +606,7 @@ export default function ProjectDetail() {
                 .filter((d) => d.drawing_id !== movingFile.file.drawing_id)
                 .map((d) => ({
                   value: d.drawing_id,
-                  label: `${d.dwg_number ?? 'no DWG #'}${d.description ? ` — ${d.description}` : ''}`.slice(0, 70),
+                  label: `${d.dwg_number ?? 'no DWG #'}${d.description ? ` - ${d.description}` : ''}`.slice(0, 70),
                 }))}
               value={movingFile.target}
               onChange={(v) => setMovingFile({ ...movingFile, target: v })}
@@ -766,7 +766,7 @@ export default function ProjectDetail() {
                 return files > 0 ? (
                   <>
                     The <strong>{files} uploaded document{files === 1 ? '' : 's'}</strong> will
-                    be kept and become unassigned — no documents are ever deleted by this.
+                    be kept and become unassigned - no documents are ever deleted by this.
                   </>
                 ) : (
                   'No uploaded documents are attached to this project.'

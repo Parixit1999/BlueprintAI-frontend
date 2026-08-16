@@ -1,7 +1,11 @@
-import { ActionIcon, Badge, Button, Select, Text, TextInput, Tooltip } from '@mantine/core'
+import { ActionIcon, Badge, Button, Select, Text, TextInput, Textarea, Tooltip } from '@mantine/core'
 import {
+  IconArrowDown,
+  IconCheck,
+  IconCopy,
   IconPencil,
   IconPlus,
+  IconSearch,
   IconSend,
   IconSparkles,
   IconThumbDown,
@@ -134,13 +138,21 @@ function sourceLabels(sources) {
 function streamingStatus(phase, sourceCount) {
   if (phase === 'searching') return 'Searching your drawings…'
   if (sourceCount > 0) {
-    return `Found ${sourceCount} source${sourceCount > 1 ? 's' : ''} — writing the answer…`
+    return `Found ${sourceCount} source${sourceCount > 1 ? 's' : ''} - writing the answer…`
   }
   return 'Writing the answer…'
 }
 
 function AssistantMessage({ messageId, content, evidence, versionContext, feedback, streaming, phase, onOpenSource, onRate }) {
   const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  function copyAnswer() {
+    navigator.clipboard?.writeText(content).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
   const sources = dedupeEvidence(evidence)
   const combined = sourceLabels(sources)
   return (
@@ -206,6 +218,17 @@ function AssistantMessage({ messageId, content, evidence, versionContext, feedba
             >
               <IconThumbDown size={15} />
             </ActionIcon>
+            <Tooltip label={copied ? 'Copied' : 'Copy answer'} withArrow>
+              <ActionIcon
+                variant="subtle"
+                color={copied ? 'teal' : 'gray'}
+                size="sm"
+                aria-label="Copy answer"
+                onClick={copyAnswer}
+              >
+                {copied ? <IconCheck size={15} /> : <IconCopy size={15} />}
+              </ActionIcon>
+            </Tooltip>
           </div>
         )}
         {sources.length > 0 && (
@@ -246,7 +269,7 @@ function AssistantMessage({ messageId, content, evidence, versionContext, feedba
                           : (s.dwg_number ?? s.region_type.replace('_', ' '))}
                         {s.region_type === 'summary' && (
                           <Tooltip
-                            label="AI-written description of the drawing — reviewed at ingestion, not text printed on the drawing."
+                            label="AI-written description of the drawing - reviewed at ingestion, not text printed on the drawing."
                             maw={280}
                             multiline
                             withArrow
@@ -281,6 +304,8 @@ export default function Chat() {
   const [projects, setProjects] = useState([])
   const [projectScope, setProjectScope] = useState(null) // null = all projects
   const [renamingId, setRenamingId] = useState(null)
+  const [sessionQuery, setSessionQuery] = useState('')
+  const [showJump, setShowJump] = useState(false)
   const [pendingDelete, setPendingDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const toast = useToast()
@@ -300,6 +325,25 @@ export default function Chat() {
     }
   }, [fileScope])
   const bottomRef = useRef(null)
+  const threadRef = useRef(null)
+  const composerRef = useRef(null)
+  // follow the newest message only while the reader is already at the bottom;
+  // scrolled-up reading is never yanked back down by streaming tokens
+  const stickRef = useRef(true)
+
+  function onThreadScroll() {
+    const el = threadRef.current
+    if (!el) return
+    const fromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    stickRef.current = fromBottom < 120
+    setShowJump(fromBottom > 300)
+  }
+
+  function jumpToLatest() {
+    stickRef.current = true
+    setShowJump(false)
+    bottomRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
+  }
 
   useEffect(() => {
     listChatSessions()
@@ -327,9 +371,9 @@ export default function Chat() {
   // embedded webviews, where it silently no-ops and leaves the reader looking
   // at the top of the conversation.
   useEffect(() => {
-    const frame = requestAnimationFrame(() =>
-      bottomRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' }),
-    )
+    const frame = requestAnimationFrame(() => {
+      if (stickRef.current) bottomRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
+    })
     return () => cancelAnimationFrame(frame)
   }, [messages, busy])
 
@@ -360,6 +404,8 @@ export default function Chat() {
     try {
       const res = await getChatMessages(sessionId)
       setMessages(res.messages)
+      stickRef.current = true
+      composerRef.current?.focus()
     } catch (e) {
       toast.error(e.message)
     }
@@ -408,6 +454,7 @@ export default function Chat() {
       setActive(s.session_id)
       setMessages([])
       setSourceOpen(null)
+      composerRef.current?.focus()
     } catch (e) {
       toast.error(e.message)
     }
@@ -433,6 +480,7 @@ export default function Chat() {
 
     setInput('')
     setBusy(true)
+    stickRef.current = true
     setMessages((m) => [
       ...m,
       { message_id: 'pending-user', role: 'user', content: question },
@@ -491,7 +539,7 @@ export default function Chat() {
     <div>
       <PageHeader
         title="Chat"
-        description="Ask questions about your drawings — every answer cites its source regions"
+        description="Ask questions about your drawings - every answer cites its source regions"
         onRefresh={refreshChats}
         mb="md"
       />
@@ -515,9 +563,25 @@ export default function Chat() {
           onChange={(v) => setProjectScope(v === 'all' ? null : v)}
           searchable
         />
+        {sessions.length > 3 && (
+          <TextInput
+            size="xs"
+            mt={6}
+            placeholder="Find a chat…"
+            leftSection={<IconSearch size={13} />}
+            value={sessionQuery}
+            onChange={(e) => setSessionQuery(e.currentTarget.value)}
+            aria-label="Find a conversation"
+          />
+        )}
         <div className="session-list">
           {sessions.length > 0 && <div className="session-group-label">Conversations</div>}
-          {sessions.map((s) => (
+          {(sessionQuery
+            ? sessions.filter((s) =>
+                s.title.toLowerCase().includes(sessionQuery.trim().toLowerCase()),
+              )
+            : sessions
+          ).map((s) => (
             <SessionRow
               key={s.session_id}
               session={s}
@@ -531,19 +595,19 @@ export default function Chat() {
           ))}
           {sessions.length === 0 && (
             <Text size="sm" c="dimmed" px="xs" py="sm">
-              No chats yet — ask a question to start one.
+              No chats yet - ask a question to start one.
             </Text>
           )}
         </div>
       </aside>
 
       <section className="chat-main">
-        <div className="chat-thread">
+        <div className="chat-thread" ref={threadRef} onScroll={onThreadScroll}>
           {messages.length === 0 && !busy && (
             <div className="empty-state">
               <p>Ask anything about your ingested drawings</p>
               <p className="page-sub">
-                Every answer cites the regions it came from — click a citation to see it
+                Every answer cites the regions it came from - click a citation to see it
                 highlighted on the drawing itself.
               </p>
               {/* Examples that fill the composer (they do not send) so an
@@ -559,7 +623,10 @@ export default function Chat() {
                     key={q}
                     type="button"
                     className="chat-starter"
-                    onClick={() => setInput(q)}
+                    onClick={() => {
+                      setInput(q)
+                      composerRef.current?.focus()
+                    }}
                   >
                     {q}
                   </button>
@@ -602,6 +669,12 @@ export default function Chat() {
           )}
           <div ref={bottomRef} />
         </div>
+        {showJump && (
+          <button type="button" className="jump-latest" onClick={jumpToLatest}>
+            <IconArrowDown size={14} />
+            Latest
+          </button>
+        )}
         {fileScope && (
           <div className="file-scope-chip">
             <Badge
@@ -623,13 +696,23 @@ export default function Chat() {
           </div>
         )}
         <form className="chat-input" onSubmit={send}>
-          <TextInput
+          <Textarea
             className="chat-input-field"
+            ref={composerRef}
             value={input}
             size="md"
             radius="md"
-            placeholder="Ask about your drawings — e.g. What material is the mounting plate?"
+            autosize
+            minRows={1}
+            maxRows={6}
+            placeholder="Ask about your drawings - Enter sends, Shift+Enter starts a new line"
             onChange={(e) => setInput(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                send(e)
+              }
+            }}
             aria-label="Ask a question about your drawings"
           />
           <Button

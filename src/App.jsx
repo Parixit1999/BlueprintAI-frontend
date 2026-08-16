@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import './App.css'
 import Sidebar from './components/Sidebar'
 import { ToastProvider } from './components/Toast'
+import TopProgress from './components/TopProgress'
 import UploadIndicator from './components/UploadIndicator'
 import { AuthProvider } from './context/AuthContext'
 import { UploadQueueProvider } from './context/UploadQueueContext'
@@ -13,7 +14,7 @@ import Documents from './pages/Documents'
 import DrawingDetail from './pages/DrawingDetail'
 import { Navigate } from 'react-router-dom'
 import ProjectDetail from './pages/ProjectDetail'
-import Projects from './pages/Projects'
+import Registry from './pages/Registry'
 import Upload from './pages/Upload'
 
 export default function App() {
@@ -23,17 +24,20 @@ export default function App() {
       <AuthProvider loginScreen={(props) => <Login {...props} />}>
       {/* Provider sits above the routes so uploads keep processing across navigation */}
       <UploadQueueProvider>
+        <TopProgress />
         <div className="shell">
           <Sidebar />
           <main className="content">
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/projects" element={<Projects />} />
+              {/* the Projects list page is retired: the Registry's sheet
+                  tabs are the project navigation now */}
+              <Route path="/projects" element={<Navigate to="/registry" replace />} />
               <Route path="/projects/:projectId" element={<ProjectDetail />} />
               <Route path="/drawings/:drawingId" element={<DrawingDetail />} />
-              {/* folders retired: projects ARE the file system */}
-              <Route path="/files" element={<Navigate to="/projects" replace />} />
+              <Route path="/files" element={<Navigate to="/registry" replace />} />
               <Route path="/upload" element={<Upload />} />
+              <Route path="/registry" element={<Registry />} />
               <Route path="/documents" element={<Documents />} />
               <Route path="/documents/:fileId" element={<DocumentDetail />} />
               <Route path="/chat" element={<Chat />} />

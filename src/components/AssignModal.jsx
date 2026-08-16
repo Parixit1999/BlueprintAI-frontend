@@ -80,7 +80,7 @@ export default function AssignModal({ file, onClose, onAssigned }) {
                   Looks like a new version
                 </Text>
                 <Tooltip
-                  label="The drawing number matches an existing registry entry, but the year (and content analysis) say this file is a different iteration. Accepting creates a linked version — the existing record is untouched."
+                  label="The drawing number matches an existing registry entry, but the year (and content analysis) say this file is a different iteration. Accepting creates a linked version - the existing record is untouched."
                   maw={320}
                   multiline
                   withArrow
@@ -108,7 +108,7 @@ export default function AssignModal({ file, onClose, onAssigned }) {
                       <Group gap="xs" wrap="nowrap">
                         <IconFile size={15} />
                         <Text size="sm" fw={500} truncate>
-                          {v.dwg_number} · {v.new_year} — new iteration of the{' '}
+                          {v.dwg_number} · {v.new_year} - new iteration of the{' '}
                           {v.existing_year} version
                           {v.project_name ? ` · ${v.project_name}` : ''}
                         </Text>
@@ -170,7 +170,7 @@ export default function AssignModal({ file, onClose, onAssigned }) {
                         </Badge>
                       </Group>
                       <Text size="xs" c="dimmed" truncate>
-                        {s.description ?? ''} — {s.reason}
+                        {s.description ?? ''} - {s.reason}
                       </Text>
                     </div>
                     <Button
@@ -248,14 +248,14 @@ export default function AssignModal({ file, onClose, onAssigned }) {
           {suggestions.drawing_suggestions.length === 0 &&
             suggestions.project_suggestions.length === 0 && (
               <Text size="sm" c="dimmed">
-                No automatic match found in the file name. Pick a project below — a new
+                No automatic match found in the file name. Pick a project below - a new
                 drawing will be created in it for this file.
               </Text>
             )}
 
           <TextInput
             label="Drawing number"
-            description="Assigning to a project files this document under a drawing in the registry. This is the number that drawing gets — detected from the file name; edit it if it's wrong."
+            description="Assigning to a project files this document under a drawing in the registry. This is the number that drawing gets - detected from the file name; edit it if it's wrong."
             placeholder="e.g. 11778-W-59 (left blank: taken from the file name)"
             value={dwgNumber}
             onChange={(e) => setDwgNumber(e.currentTarget.value)}

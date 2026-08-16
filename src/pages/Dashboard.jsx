@@ -147,7 +147,7 @@ export default function Dashboard() {
           label="Projects"
           value={stats.projects_total ?? 0}
           hint={`${stats.drawings_total ?? 0} drawings · ${stats.sets_total ?? 0} sets`}
-          to="/projects"
+          to="/registry"
         />
         <Tile
           label="Documents"

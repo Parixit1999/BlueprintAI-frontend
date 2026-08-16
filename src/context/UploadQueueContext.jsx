@@ -21,7 +21,7 @@ const ACTIVE_STATUSES = ['queued', 'uploading', 'processing']
 // What the backend is doing during the "processing" phase, by file type.
 const PROCESSING_HINT = {
   dxf: 'Parsing CAD geometry and extracting regions…',
-  pdf: 'Extracting text — scanned pages are read with the vision model…',
+  pdf: 'Extracting text - scanned pages are read with the vision model…',
   png: 'Analyzing the drawing with the vision model…',
   jpg: 'Analyzing the drawing with the vision model…',
   jpeg: 'Analyzing the drawing with the vision model…',

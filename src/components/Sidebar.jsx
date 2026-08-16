@@ -1,12 +1,12 @@
 import { Burger, Button, Drawer, Menu, PasswordInput, Stack } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import {
-  IconFolders,
   IconKey,
   IconLayoutDashboard,
   IconLogout,
   IconMessageCircle,
   IconFileText,
+  IconTable,
   IconUpload,
 } from '@tabler/icons-react'
 import { useState } from 'react'
@@ -18,7 +18,7 @@ import { useToast } from './Toast'
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: IconLayoutDashboard, end: true },
-  { to: '/projects', label: 'Projects', icon: IconFolders },
+  { to: '/registry', label: 'Number Book', icon: IconTable },
   { to: '/upload', label: 'Upload', icon: IconUpload },
   { to: '/documents', label: 'Documents', icon: IconFileText },
   { to: '/chat', label: 'Chat', icon: IconMessageCircle },

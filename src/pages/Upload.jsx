@@ -106,7 +106,7 @@ export default function Upload() {
         title="Upload drawings"
         description={
           scopeDrawingId
-            ? `Files uploaded here attach directly to drawing ${scopeDrawingName ?? 'you came from'} — no assignment step needed.`
+            ? `Files uploaded here attach directly to drawing ${scopeDrawingName ?? 'you came from'} - no assignment step needed.`
             : scopeProjectId
             ? `Files uploaded here are filed into project ${scopeProjectName ?? 'you came from'} as new drawings.`
             : uploadFolderId
@@ -146,7 +146,7 @@ export default function Upload() {
                   Drag drawings here, or click to browse
                 </Text>
                 <Text size="sm" c="dimmed" mt={4}>
-                  Drop as many as you like — or a .zip archive for a bulk import.
+                  Drop as many as you like - or a .zip archive for a bulk import.
                 </Text>
               </Box>
               <div className="dropzone-formats">
@@ -244,7 +244,7 @@ export default function Upload() {
                         if (state?.kind === 'undone') {
                           return (
                             <Text size="xs" c="dimmed" mt={4}>
-                              Unassigned — use Assign on the Documents page.
+                              Unassigned - use Assign on the Documents page.
                             </Text>
                           )
                         }
@@ -339,7 +339,7 @@ export default function Upload() {
                         }
                         title={
                           item.status === 'processing'
-                            ? 'Cancel — discards this document and its processing'
+                            ? 'Cancel - discards this document and its processing'
                             : undefined
                         }
                         onClick={() => removeItem(item.id)}
@@ -388,7 +388,7 @@ export default function Upload() {
               </Group>
               <Text size="xs" c="dimmed" mt={8}>
                 {scopeDrawingId
-                  ? 'Files attach straight to this drawing — no assignment step.'
+                  ? 'Files attach straight to this drawing - no assignment step.'
                   : 'Each file is filed into this project as a new drawing.'}
               </Text>
             </Paper>
@@ -422,7 +422,7 @@ export default function Upload() {
               </div>
             </div>
             <Text size="xs" c="dimmed" mt="md">
-              You can leave this page — uploads keep running and stay visible from anywhere
+              You can leave this page - uploads keep running and stay visible from anywhere
               in the app.
             </Text>
           </Paper>

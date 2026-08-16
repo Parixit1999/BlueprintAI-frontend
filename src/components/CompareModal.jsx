@@ -74,7 +74,7 @@ export default function CompareModal({ file, allFiles, onClose, onDeleted }) {
     try {
       // veto the pair on screen; both directions clear server-side
       await dismissDuplicate(file.file_id, matchId)
-      toast.success('Marked as not a duplicate — this pair won’t be flagged again.')
+      toast.success('Marked as not a duplicate - this pair won’t be flagged again.')
       onDeleted?.() // parent refreshes the list, same as after a delete
       onClose()
     } catch (e) {
@@ -122,7 +122,7 @@ export default function CompareModal({ file, allFiles, onClose, onDeleted }) {
           label="Compare with"
           data={matches.map((m) => ({
             value: m.file_id,
-            label: `${m.filename} — ${Math.round(m.similarity * 100)}% similar`,
+            label: `${m.filename} - ${Math.round(m.similarity * 100)}% similar`,
           }))}
           value={matchId}
           onChange={(v) => v && setMatchId(v)}
@@ -147,7 +147,7 @@ export default function CompareModal({ file, allFiles, onClose, onDeleted }) {
       </Grid>
 
       <Text size="xs" c="dimmed" mt="md" ta="center">
-        Review both drawings, then delete the copy you don't need — or, if they are genuinely
+        Review both drawings, then delete the copy you don't need - or, if they are genuinely
         different drawings, mark them as not duplicates and the flag won't come back.
       </Text>
 
@@ -157,7 +157,7 @@ export default function CompareModal({ file, allFiles, onClose, onDeleted }) {
           loading={dismissing}
           onClick={notADuplicate}
         >
-          These are different — not a duplicate
+          These are different - not a duplicate
         </Button>
       </Center>
 

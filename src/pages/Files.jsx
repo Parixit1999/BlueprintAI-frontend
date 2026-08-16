@@ -262,7 +262,7 @@ export default function Files() {
     <div>
       <PageHeader
         title="Files"
-        description="Organize drawings in folders — by project, set, version, or any structure you like"
+        description="Organize drawings in folders - by project, set, version, or any structure you like"
         onRefresh={refresh}
         actions={
           <Group gap="xs">
@@ -395,7 +395,7 @@ export default function Files() {
                             {f.dwg_number ?? 'Drawing'}
                           </Button>
                         ) : (
-                          <span className="muted">—</span>
+                          <span className="muted">-</span>
                         )}
                       </td>
                       <td className="cell-type">{f.file_type.toUpperCase()}</td>
@@ -511,7 +511,7 @@ export default function Files() {
         <Stack gap="sm">
           <Select
             label="Destination folder"
-            description="Type any part of the path — e.g. “riverside/2022”"
+            description="Type any part of the path - e.g. “riverside/2022”"
             placeholder="Choose a destination…"
             data={moveOptions}
             value={moveTarget}
