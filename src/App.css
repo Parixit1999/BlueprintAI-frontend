@@ -851,17 +851,17 @@ tbody tr.no-hover:hover {
   font-variant-numeric: tabular-nums;
 }
 
-.cell-action {
-  white-space: nowrap;
-}
-
 /* Actions align in fixed slots so buttons line up column-wise across rows
-   even when a slot is empty for a given row. */
+   even when a slot is empty for a given row. If a row still outgrows the
+   column (every action at once), buttons wrap to a second line rather than
+   clip out of view. */
 .action-row {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: var(--sp-1);
+  flex-wrap: wrap;
+  row-gap: 4px;
 }
 
 .action-slot {
@@ -941,10 +941,21 @@ tbody tr.no-hover:hover {
   color: var(--accent);
 }
 
+/* Anchored to the table's bottom-right corner, where the eye lands after
+   scanning a ledger, and where it stays put page after page. */
 .table-pagination {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   margin-top: var(--sp-4);
+}
+
+/* Short last pages keep the table at its full-page height: the pager and
+   everything below it never jump up when a page has fewer rows. */
+.row-filler td {
+  height: 53px;
+}
+.row-filler:hover {
+  background: transparent;
 }
 
 /* Fixed layout: column widths never re-measure when rows change, so sorting
@@ -1138,6 +1149,18 @@ tbody tr.no-hover:hover {
   background: var(--warning-wash);
   cursor: help;
   white-space: nowrap;
+}
+
+/* clickable variant: the tag IS the compare action */
+.dup-tag-btn {
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease);
+}
+.dup-tag-btn:hover {
+  background: var(--warning);
+  color: #fff;
   line-height: 1.6;
 }
 
@@ -2741,4 +2764,215 @@ tbody tr.no-hover:hover {
     grid-template-columns: minmax(0, 1fr);
     gap: 2px;
   }
+}
+/* ---------- Registry (spreadsheet view) ---------- */
+/* The page owns the full content height: grid stretches, tabs sit at the
+   bottom like a workbook, and the page itself never scrolls. */
+.registry-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.registry-grid {
+  flex: 1;
+  min-height: 260px;
+}
+.registry-rownum {
+  color: var(--ink-faint);
+  background: var(--surface-2);
+  font-size: 11px;
+  text-align: center;
+  user-select: none;
+  cursor: pointer;
+}
+/* hovering the number reads as a link: this is the row's "open" handle */
+.registry-rownum:hover {
+  background: var(--accent-wash);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+.registry-muted {
+  color: var(--muted);
+}
+.registry-scans {
+  color: var(--accent-text);
+  cursor: pointer;
+}
+
+/* Excel-style sheet bar along the bottom edge: picker · Main Book (pinned) ·
+   scrollable sheet strip · new-sheet button. Built to survive 40+ sheets. */
+.registry-sheetbar {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 6px 2px 0;
+  flex-shrink: 0;
+  min-width: 0;
+}
+.registry-tabs {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  min-width: 0;
+}
+.registry-sheet-picker,
+.registry-new-sheet {
+  flex-shrink: 0;
+  gap: 4px;
+}
+.registry-sheet-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.registry-sheet-item:hover {
+  background: var(--accent-wash);
+}
+.registry-sheet-item.active {
+  background: var(--accent-wash);
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+.registry-sheet-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.registry-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--hairline);
+  border-top: none;
+  border-radius: 0 0 7px 7px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  padding: 5px 12px 6px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+.registry-tab:hover {
+  background: var(--accent-wash);
+}
+.registry-tab.active {
+  background: var(--surface);
+  color: var(--accent-strong);
+  font-weight: 600;
+  border-color: var(--accent-wash-2);
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+.registry-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.registry-tab-count {
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.registry-tab.active .registry-tab-count {
+  color: var(--accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .registry-tab {
+    transition: none;
+  }
+}
+
+/* ---------- Global loading & progress ---------- */
+/* Slim activity bar pinned to the very top of the viewport */
+.top-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-strong) 100%);
+  box-shadow: 0 0 8px rgba(42, 120, 214, 0.6);
+  border-radius: 0 2px 2px 0;
+  z-index: 3000;
+  opacity: 0;
+  transition: width 200ms ease, opacity 300ms ease;
+  pointer-events: none;
+}
+.top-progress.visible {
+  opacity: 1;
+}
+
+/* Breathing brand mark for loading states */
+.loading-pulse {
+  animation: brand-breathe 1.4s ease-in-out infinite;
+}
+@keyframes brand-breathe {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.88); opacity: 0.65; }
+}
+
+/* In-grid loading overlay for the Number Book */
+.registry-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+/* Toasts sit on the hairline system like every other surface */
+.mantine-Notification-root {
+  border: 1px solid var(--hairline);
+  box-shadow: 0 8px 24px rgba(16, 24, 32, 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-pulse {
+    animation: none;
+  }
+  .top-progress {
+    transition: opacity 300ms ease;
+  }
+}
+
+/* ---------- Chat comfort ---------- */
+/* Floating return-to-latest control: appears only when the reader has
+   scrolled up into history, sits just above the composer. */
+.chat-main {
+  position: relative;
+}
+.jump-latest {
+  position: absolute;
+  bottom: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--accent-text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(16, 24, 32, 0.14);
+  z-index: 5;
+  transition: background var(--dur-1) var(--ease);
+}
+.jump-latest:hover {
+  background: var(--accent-wash);
 }

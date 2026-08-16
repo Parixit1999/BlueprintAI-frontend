@@ -2,7 +2,6 @@ import {
   ActionIcon,
   Button,
   Checkbox,
-  Pagination,
   Select,
   TextInput,
   Tooltip,
@@ -23,6 +22,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import ErrorState from '../components/ErrorState'
 import Loading from '../components/Loading'
 import PageHeader from '../components/PageHeader'
+import TablePagination from '../components/TablePagination'
 import { useToast } from '../components/Toast'
 
 const STATUS_OPTIONS = [
@@ -194,8 +194,8 @@ export default function Documents() {
     refresh()
     // confirms return instantly ('ingesting' claims); embedding runs
     // server-side - rows flip to Ingested as each one finishes
-    if (failed) toast.error(`${ok} ingesting in the background; ${failed} failed to start — see the list.`)
-    else toast.success(`${ok} document${ok === 1 ? '' : 's'} ingesting in the background — status updates as each finishes.`)
+    if (failed) toast.error(`${ok} ingesting in the background; ${failed} failed to start - see the list.`)
+    else toast.success(`${ok} document${ok === 1 ? '' : 's'} ingesting in the background - status updates as each finishes.`)
   }
 
   async function confirmDelete() {
@@ -242,7 +242,7 @@ export default function Documents() {
           <span className="notice-icon">!</span>
           <span>
             {duplicateCount} document{duplicateCount > 1 ? 's look' : ' looks'} like a possible
-            duplicate — the same drawing content appears more than once, even across file formats.
+            duplicate - the same drawing content appears more than once, even across file formats.
             Review the matches and delete the extra copies.
           </span>
           <Button
@@ -270,9 +270,10 @@ export default function Documents() {
                 <col />
                 <col style={{ width: 180 }} />
                 <col style={{ width: 74 }} />
-                <col style={{ width: 170 }} />
+                <col style={{ width: 120 }} />
                 <col style={{ width: 104 }} />
-                <col style={{ width: 186 }} />
+                {/* widest real case: Assign + Review + delete icon */}
+                <col style={{ width: 200 }} />
               </colgroup>
 
             <thead>
@@ -288,7 +289,7 @@ export default function Documents() {
             <tbody>
               <tr className="no-hover">
                 <td colSpan={6} className="empty-note center">
-                  No documents yet — upload a DXF, DWG, RVT, PDF, or drawing photo to get
+                  No documents yet - upload a DXF, DWG, RVT, PDF, or drawing photo to get
                   started.{' '}
                   <Button variant="subtle" size="compact-sm" onClick={() => navigate('/upload')}>
                     Upload drawings
@@ -363,9 +364,10 @@ export default function Documents() {
                 <col />
                 <col style={{ width: 180 }} />
                 <col style={{ width: 74 }} />
-                <col style={{ width: 170 }} />
+                <col style={{ width: 120 }} />
                 <col style={{ width: 104 }} />
-                <col style={{ width: 186 }} />
+                {/* widest real case: Assign + Review + delete icon */}
+                <col style={{ width: 200 }} />
               </colgroup>
 
               <thead>
@@ -406,22 +408,22 @@ export default function Documents() {
                           {f.is_drawing === false && (
                             <span
                               className="dup-tag not-drawing-tag"
-                              title="The AI judged this image is not an engineering drawing — check it before ingesting."
+                              title="The AI judged this image is not an engineering drawing - check it before ingesting."
                             >
                               Not a drawing
                             </span>
                           )}
                           {f.is_duplicate && (
-                            <span
-                              className="dup-tag"
-                              title={
-                                match
-                                  ? `${Math.round(match.similarity * 100)}% similar to ${match.filename}`
-                                  : 'Possible duplicate'
-                              }
+                            <button
+                              className="dup-tag dup-tag-btn"
+                              title="Compare the two drawings side by side"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setComparing(f)
+                              }}
                             >
-                              Possible duplicate
-                            </span>
+                              Possible duplicate - compare
+                            </button>
                           )}
                           {match && (
                             <span className="dup-match" title={match.filename}>
@@ -465,7 +467,7 @@ export default function Documents() {
                           )}
                         </div>
                       ) : (
-                        <span className="muted">—</span>
+                        <span className="muted">-</span>
                       )}
                     </td>
                     <td className="cell-type">{f.file_type.toUpperCase()}</td>
@@ -495,16 +497,6 @@ export default function Documents() {
                               onClick={() => setAssigning(f)}
                             >
                               Assign
-                            </Button>
-                          )}
-                          {f.is_duplicate && (
-                            <Button
-                              variant="light"
-                              color="orange"
-                              size="compact-xs"
-                              onClick={() => setComparing(f)}
-                            >
-                              Compare
                             </Button>
                           )}
                         </span>
@@ -554,20 +546,26 @@ export default function Documents() {
                     </td>
                   </tr>
                 )}
+                {/* short last pages hold full-page height so the pager
+                    below never jumps upward between pages */}
+                {pageCount > 1 &&
+                  items.length > 0 &&
+                  items.length < PAGE_SIZE &&
+                  Array.from({ length: PAGE_SIZE - items.length }, (_, i) => (
+                    <tr key={`filler-${i}`} className="no-hover row-filler" aria-hidden="true">
+                      <td colSpan={6} />
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
 
-          {pageCount > 1 && (
-            <div className="table-pagination">
-              <Pagination
-                total={pageCount}
-                value={currentPage}
-                onChange={(p) => setFilter('page', String(p))}
-                size="sm"
-              />
-            </div>
-          )}
+          <TablePagination
+            page={currentPage}
+            pageSize={PAGE_SIZE}
+            totalItems={totalFiltered}
+            onChange={(p) => setFilter('page', String(p))}
+          />
         </>
       )}
 
@@ -603,7 +601,7 @@ export default function Documents() {
           message={
             <>
               This adds all {pendingReviewCount} documents awaiting review to the knowledge base{' '}
-              <strong>as extracted, without individual review</strong> — including any
+              <strong>as extracted, without individual review</strong> - including any
               low-confidence regions. You can still open, re-extract, or delete any document
               afterwards. Large drawings take a few minutes each; they’ll show as
               “Processing” while they’re added.

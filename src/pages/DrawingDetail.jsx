@@ -114,7 +114,7 @@ export default function DrawingDetail() {
             const base = d.dwg_number ?? 'no DWG #'
             return {
               value: d.drawing_id,
-              label: (detail ? `${base} — ${detail}` : base).slice(0, 80),
+              label: (detail ? `${base} - ${detail}` : base).slice(0, 80),
             }
           }),
       )
@@ -254,7 +254,7 @@ export default function DrawingDetail() {
                 placeholder={projectSets.length ? 'No set' : 'No sets in this project yet'}
                 data={projectSets.map((s) => ({
                   value: s.set_id,
-                  label: s.name ? `${s.set_number} — ${s.name}` : s.set_number,
+                  label: s.name ? `${s.set_number} - ${s.name}` : s.set_number,
                 }))}
                 value={form.set_id}
                 onChange={(v) => setForm({ ...form, set_id: v })}
@@ -365,7 +365,7 @@ export default function DrawingDetail() {
             {drawing.other_versions.length === 0 ? (
               <Text size="sm" c="dimmed">
                 No other versions. If another drawing is an older or newer iteration of this
-                one, link it here — versions are told apart by their date and version note.
+                one, link it here - versions are told apart by their date and version note.
               </Text>
             ) : (
               <Stack gap={6}>
@@ -382,7 +382,7 @@ export default function DrawingDetail() {
                     <div style={{ minWidth: 0 }}>
                       <Text size="sm" fw={500} truncate>
                         {v.dwg_number ?? 'Drawing'}
-                        {v.version_note ? ` — ${v.version_note}` : ''}
+                        {v.version_note ? ` - ${v.version_note}` : ''}
                       </Text>
                       <Text size="xs" c="dimmed" truncate>
                         {v.description ?? ''}

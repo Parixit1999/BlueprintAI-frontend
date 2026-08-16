@@ -34,7 +34,25 @@ function handleUnauthorized() {
   window.dispatchEvent(new Event('bp:unauthorized'))
 }
 
+// ---------- Global request activity (drives the top progress bar) ----------
+let inflightCount = 0
+function trackStart() {
+  if (++inflightCount === 1) window.dispatchEvent(new Event('bp:busy'))
+}
+function trackEnd() {
+  if (--inflightCount === 0) window.dispatchEvent(new Event('bp:idle'))
+}
+
 async function request(path, options = {}) {
+  trackStart()
+  try {
+    return await requestInner(path, options)
+  } finally {
+    trackEnd()
+  }
+}
+
+async function requestInner(path, options = {}) {
   let res
   try {
     res = await fetch(`${API_BASE}${path}`, {
@@ -399,4 +417,53 @@ export function moveFile(fileId, folderId) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ folder_id: folderId }),
   })
+}
+
+// --- Registry (spreadsheet view of the Drawings Number Book) ---
+
+export function listRegistryTabs() {
+  return request('/registry/tabs')
+}
+
+export function listRegistryRows(projectId = null) {
+  return request(projectId ? `/registry/rows?project_id=${projectId}` : '/registry/rows')
+}
+
+export function updateRegistryRow(drawingId, fields) {
+  return request(`/registry/rows/${drawingId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fields),
+  })
+}
+
+export function createRegistryRow(fields) {
+  return request('/registry/rows', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fields),
+  })
+}
+
+export async function downloadRegistryExport(projectId = null) {
+  const path = projectId ? `/registry/export?project_id=${projectId}` : '/registry/export'
+  trackStart()
+  let res
+  try {
+    res = await fetch(`${API_BASE}${path}`, { headers: authHeaders() })
+  } finally {
+    trackEnd()
+  }
+  if (res.status === 401) {
+    handleUnauthorized()
+    throw new Error('Your session has expired. Please sign in again.')
+  }
+  if (!res.ok) throw new Error(GENERIC_MESSAGE)
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'Drawings Number Book.xlsx'
+  a.click()
+  URL.revokeObjectURL(url)
 }
