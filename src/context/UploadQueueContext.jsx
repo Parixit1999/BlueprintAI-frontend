@@ -41,7 +41,10 @@ const UploadQueueContext = createContext(null)
 export function UploadQueueProvider({ children }) {
   const [items, setItems] = useState([])
   const [expanding, setExpanding] = useState(false)
-  const runningRef = useRef(false)
+  // null when idle; while the pool runs, holds a kick() that wakes idle
+  // worker slots so files dropped MID-RUN start immediately instead of
+  // waiting behind whatever the surviving workers are grinding through
+  const runningRef = useRef(null)
   // per-item XHR abort functions for in-flight uploads
   const abortHandles = useRef(new Map())
   const toast = useToast()
@@ -180,8 +183,11 @@ export function UploadQueueProvider({ children }) {
   }
 
   async function processQueue() {
-    if (runningRef.current) return
-    runningRef.current = true
+    if (runningRef.current) {
+      runningRef.current.kick()
+      return
+    }
+    runningRef.current = { kick: () => {} }
     const claimNext = () =>
       new Promise((resolve) =>
         setItems((prev) => {
@@ -219,9 +225,10 @@ export function UploadQueueProvider({ children }) {
       const maybeSpawn = () => {
         while (state.active < state.target) spawnOne()
       }
+      runningRef.current = { kick: maybeSpawn }
       maybeSpawn()
     })
-    runningRef.current = false
+    runningRef.current = null
   }
 
   function retryItem(id) {
