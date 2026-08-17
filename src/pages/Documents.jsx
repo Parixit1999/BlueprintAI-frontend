@@ -11,6 +11,7 @@ import {
   IconSearch,
   IconTrash,
   IconUpload,
+  IconX,
 } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -415,6 +416,20 @@ export default function Documents() {
               onChange={(e) => setFilter('dup', e.currentTarget.checked)}
               styles={{ label: { fontSize: 'var(--fs-sm)', color: 'var(--ink-2)' } }}
             />
+            {(query ||
+              typeFilter !== 'all' ||
+              statusFilter !== 'all' ||
+              assignedFilter !== 'all' ||
+              dupOnly) && (
+              <Button
+                variant="subtle"
+                size="compact-sm"
+                leftSection={<IconX size={14} />}
+                onClick={() => setSearchParams({}, { replace: true })}
+              >
+                Clear all
+              </Button>
+            )}
             <span className="filter-count">
               {totalFiltered} of {grandTotal}
             </span>
