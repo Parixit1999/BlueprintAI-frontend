@@ -1,7 +1,6 @@
 import {
   ActionIcon,
   Button,
-  Checkbox,
   Select,
   TextInput,
   Tooltip,
@@ -48,7 +47,6 @@ export default function Documents() {
   const statusFilter = searchParams.get('status') ?? 'all'
   const assignedFilter = searchParams.get('assigned') ?? 'all'
   const drawingFilter = searchParams.get('drawing') ?? 'all'
-  const dupOnly = searchParams.get('dup') === '1'
   // Default order groups the list by format, most common format first
   // (server-side `type_count` sort); clicking any header takes over.
   const sortKey = searchParams.get('sort') ?? 'type_count'
@@ -111,7 +109,7 @@ export default function Documents() {
   // page costs the same whether the archive has 14 documents or 14,000.
   const listParams = {
     q: query, file_type: typeFilter, status: statusFilter,
-    assigned: assignedFilter, drawing: drawingFilter, dup_only: dupOnly,
+    assigned: assignedFilter, drawing: drawingFilter,
     sort: sortKey, dir: sortDir, page, page_size: PAGE_SIZE,
   }
   function refresh() {
@@ -128,11 +126,10 @@ export default function Documents() {
     const t = setTimeout(refresh, query ? 250 : 0)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, typeFilter, statusFilter, assignedFilter, drawingFilter, dupOnly, sortKey, sortDir, page])
+  }, [query, typeFilter, statusFilter, assignedFilter, drawingFilter, sortKey, sortDir, page])
 
   const items = files?.items ?? []
   const types = files?.types ?? []
-  const duplicateCount = files?.duplicate_count ?? 0
   const pendingReviewCount = files?.pending_review_count ?? 0
   const failedCount = files?.failed_count ?? 0
   const totalFiltered = files?.total ?? 0
@@ -301,26 +298,6 @@ export default function Documents() {
         }
       />
 
-      {duplicateCount > 0 && (
-        <div className="notice">
-          <span className="notice-icon">!</span>
-          <span>
-            {duplicateCount} document{duplicateCount > 1 ? 's look' : ' looks'} like a possible
-            duplicate - the same drawing content appears more than once, even across file formats.
-            Review the matches and delete the extra copies.
-          </span>
-          <Button
-            variant="subtle"
-            color="orange"
-            size="compact-sm"
-            style={{ flexShrink: 0 }}
-            onClick={() => setFilter('dup', !dupOnly)}
-          >
-            {dupOnly ? 'Show all' : 'Show duplicates'}
-          </Button>
-        </div>
-      )}
-
       {files === null && loadError ? (
         <ErrorState message={loadError} onRetry={refresh} />
       ) : files === null ? (
@@ -429,19 +406,11 @@ export default function Documents() {
                 { value: 'no', label: 'Not drawings' },
               ]}
             />
-            <Checkbox
-              size="sm"
-              label="Duplicates only"
-              checked={dupOnly}
-              onChange={(e) => setFilter('dup', e.currentTarget.checked)}
-              styles={{ label: { fontSize: 'var(--fs-sm)', color: 'var(--ink-2)' } }}
-            />
             {(query ||
               typeFilter !== 'all' ||
               statusFilter !== 'all' ||
               assignedFilter !== 'all' ||
-              drawingFilter !== 'all' ||
-              dupOnly) && (
+              drawingFilter !== 'all') && (
               <Button
                 variant="subtle"
                 size="compact-sm"
