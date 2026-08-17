@@ -73,9 +73,12 @@ function Tile({ label, value, hint, to }) {
  * question is answered before any slice is read. Pure SVG - no chart dep.
  */
 function DonutChart({ parts, centerLabel }) {
+  const navigate = useNavigate()
   const total = parts.reduce((s, p) => s + p.value, 0)
   if (total === 0) return <p className="empty-note">No data yet.</p>
   const shown = parts.filter((p) => p.value > 0)
+  // every slice is a way into that format's documents
+  const open = (p) => navigate(`/documents?type=${p.key}`)
   const R = 62
   const STROKE = 26
   const C = 2 * Math.PI * R
@@ -105,8 +108,9 @@ function DonutChart({ parts, centerLabel }) {
                   strokeWidth={STROKE}
                   strokeDasharray={`${Math.max(arc - GAP, 0.5)} ${C - Math.max(arc - GAP, 0.5)}`}
                   strokeDashoffset={-offset}
+                  onClick={() => open(p)}
                 >
-                  <title>{`${p.label}: ${p.value} (${Math.round((p.value / total) * 100)}%)`}</title>
+                  <title>{`${p.label}: ${p.value} (${Math.round((p.value / total) * 100)}%) - open these documents`}</title>
                 </circle>
               )
               offset += arc
@@ -121,11 +125,20 @@ function DonutChart({ parts, centerLabel }) {
           </text>
         </svg>
         <div className="breakdown-legend donut-legend">
-          {shown.map((p) => (
-            <span key={p.label} className="legend-item">
+          {shown.map((p, i) => (
+            // a button, not a span: the legend is the keyboard route into
+            // the same filter the slice opens on click
+            <button
+              key={p.label}
+              type="button"
+              className="legend-item legend-link"
+              style={{ '--i': i }}
+              onClick={() => open(p)}
+              title={`Open ${p.label} documents`}
+            >
               <span className="legend-swatch" style={{ background: p.color }} />
               {p.label} <strong>{p.value}</strong>
-            </span>
+            </button>
           ))}
         </div>
       </div>
@@ -199,6 +212,7 @@ function ActivityRows({ days }) {
                       height: `${(d[key] / max) * 100}%`,
                       background: color,
                       opacity: d[key] === 0 ? 0 : 1,
+                      '--i': i,
                     }}
                   />
                 </span>
@@ -222,29 +236,35 @@ function ActivityRows({ days }) {
  * processing order, which is information the old bar threw away.
  */
 function StageBars({ parts }) {
+  const navigate = useNavigate()
   const total = parts.reduce((s, p) => s + p.value, 0)
   if (total === 0) return <p className="empty-note">No documents yet.</p>
   const max = Math.max(...parts.map((p) => p.value), 1)
+  // the two server-side busy states share one filter option on Documents
+  const filterFor = (key) => (key === 'uploaded' || key === 'ingesting' ? 'processing' : key)
   return (
     <div className="stage-rows">
-      {parts.map((p) => {
+      {parts.map((p, i) => {
         const pct = Math.round((p.value / total) * 100)
         return (
-          <div
+          <button
             key={p.label}
+            type="button"
             className="stage-row"
-            title={`${p.label}: ${p.value.toLocaleString()} (${pct}% of all documents)`}
+            style={{ '--i': i }}
+            title={`${p.label}: ${p.value.toLocaleString()} (${pct}% of all documents) - open them`}
+            onClick={() => navigate(`/documents?status=${filterFor(p.key)}`)}
           >
             <span className="stage-label">{p.label}</span>
             <span className="stage-track">
               <span
                 className="stage-fill"
-                style={{ width: `${(p.value / max) * 100}%`, background: p.color }}
+                style={{ width: `${(p.value / max) * 100}%`, background: p.color, '--i': i }}
               />
             </span>
             <span className="stage-value tabular">{p.value.toLocaleString()}</span>
             <span className="stage-pct tabular">{pct}%</span>
-          </div>
+          </button>
         )
       })}
     </div>
@@ -311,8 +331,8 @@ function ConfidenceMeter({ parts }) {
         </text>
       </svg>
       <div className="breakdown-legend meter-legend">
-        {parts.map((p) => (
-          <span key={p.label} className="legend-item">
+        {parts.map((p, i) => (
+          <span key={p.label} className="legend-item" style={{ '--i': i }}>
             <span className="legend-swatch" style={{ background: p.color }} />
             {p.label} <strong>{p.value.toLocaleString()}</strong>
           </span>
@@ -330,7 +350,7 @@ function ProjectBars({ rows }) {
   const max = Math.max(...rows.map((r) => r.drawings), 1)
   return (
     <div className="project-bars">
-      {rows.map((r) => (
+      {rows.map((r, i) => (
         <button
           key={r.project_id}
           className="project-bar-row"
@@ -343,7 +363,7 @@ function ProjectBars({ rows }) {
           <span className="project-bar-track">
             <span
               className="project-bar-fill"
-              style={{ width: `${(r.drawings / max) * 100}%` }}
+              style={{ width: `${(r.drawings / max) * 100}%`, '--i': i }}
             />
           </span>
           <span className="project-bar-value">{r.drawings}</span>
@@ -384,6 +404,7 @@ export default function Dashboard() {
   const typeParts = Object.entries(stats.documents_by_type)
     .sort(([, a], [, b]) => b - a)
     .map(([type, value]) => ({
+      key: type,
       label: TYPE_LABEL[type] ?? type.toUpperCase(),
       value,
       color: TYPE_COLOR[type] ?? TYPE_COLOR_OTHER,
