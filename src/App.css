@@ -716,17 +716,24 @@
   flex-shrink: 0;
 }
 
-/* Documents-by-type donut: chart left, legend right; stacks when narrow. */
+/* Documents-by-type donut: chart left, legend right; stacks when narrow.
+   Centered vertically and spread so the pair fills the panel rather than
+   huddling in the corner. */
 .donut-wrap {
   display: flex;
   align-items: center;
+  justify-content: space-evenly;
   gap: var(--sp-5);
   flex-wrap: wrap;
+  height: 100%;
 }
 
 .donut {
-  width: 148px;
-  height: 148px;
+  /* Fill the panel's spare width: grow up to 230px, never below the
+     original 148px; the viewBox scales the center total with it. */
+  width: clamp(148px, 42%, 230px);
+  height: auto;
+  aspect-ratio: 1;
   flex-shrink: 0;
 }
 
