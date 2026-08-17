@@ -75,6 +75,16 @@ const EDITABLE = new Set([
 ])
 
 /**
+ * Long-cell tooltip: the full value as wrapped, readable prose instead of
+ * the browser's single-line strip. Used by Description, where AI summaries
+ * are paragraphs.
+ */
+function CellTooltip({ value }) {
+  if (!value) return null
+  return <div className="grid-tooltip">{value}</div>
+}
+
+/**
  * Sheet navigation built for a real book: dozens of sheets don't fit in a
  * tab strip, so the picker button opens a searchable list of every sheet
  * (Excel's right-click sheet list, made searchable), Main Book stays pinned,
@@ -354,7 +364,28 @@ export default function Registry() {
           return Number.isNaN(n) ? p.oldValue : n
         },
       },
-      { field: 'description', headerName: 'Description', flex: 1, minWidth: 320 },
+      {
+        // the scan this row came from - derived from the attached file, so
+        // it is read-only and follows the file if it is reassigned
+        field: 'filename',
+        headerName: 'Name',
+        width: 220,
+        editable: false,
+        cellClass: 'registry-muted',
+        tooltipField: 'filename',
+        tooltipComponent: CellTooltip,
+      },
+      {
+        field: 'description',
+        headerName: 'Description',
+        flex: 1,
+        minWidth: 320,
+        // AI summaries run long. The cell stays one line so the book keeps
+        // its density; hovering opens the full text as a wrapped panel you
+        // can read - and move onto, so it can be selected and copied.
+        tooltipField: 'description',
+        tooltipComponent: CellTooltip,
+      },
       { field: 'contract_number', headerName: 'Contract #', width: 180 },
       { field: 'drawing_date', headerName: 'Date', width: 110 },
       { field: 'set_number', headerName: 'Set #', width: 90 },
@@ -591,6 +622,10 @@ export default function Registry() {
             // Editing a cell opens the WHOLE row, so the pen icon and a
             // double-click land in the same place: every field of that row
             // editable at once, committed together.
+            // long summaries need a beat before they appear, and the tooltip
+            // stays put once you move onto it so the text can be selected
+            tooltipShowDelay={300}
+            tooltipInteraction
             editType="fullRow"
             onRowEditingStarted={onRowEditingStarted}
             onRowValueChanged={onRowValueChanged}
