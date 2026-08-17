@@ -32,19 +32,29 @@ import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 
 
-// "2m ago" / "3h ago" / "yesterday" / "Jul 22" - compact session recency
+// Session recency: relative while it is still "just now" territory, then the
+// clock time, because "3d ago" is not enough to find the conversation you had
+// after lunch on Tuesday. Anything older than an hour carries hour:minute.
+//   just now · 12m ago · 14:32 · Yesterday 14:32 · Sat 14:32 · Aug 14, 14:32
 function timeAgo(iso) {
   if (!iso) return ''
   const then = new Date(iso)
   const mins = Math.floor((Date.now() - then.getTime()) / 60000)
   if (mins < 1) return 'just now'
   if (mins < 60) return `${mins}m ago`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days === 1) return 'yesterday'
-  if (days < 7) return `${days}d ago`
-  return then.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+
+  const clock = then.toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  const startOfToday = new Date()
+  startOfToday.setHours(0, 0, 0, 0)
+  const dayDiff = Math.round((startOfToday - new Date(then).setHours(0, 0, 0, 0)) / 86400000)
+
+  if (dayDiff <= 0) return clock
+  if (dayDiff === 1) return `Yesterday ${clock}`
+  if (dayDiff < 7) return `${then.toLocaleDateString(undefined, { weekday: 'short' })} ${clock}`
+  return `${then.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}, ${clock}`
 }
 
 function SessionRow({ session, active, renaming, onOpen, onStartRename, onSaveRename, onDelete }) {
