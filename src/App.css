@@ -752,6 +752,8 @@
   gap: var(--sp-2);
 }
 
+/* Each stage opens its own slice of Documents, so the row is a button that
+   looks like a row until you reach it. */
 .stage-row {
   display: grid;
   grid-template-columns: minmax(0, 40%) 1fr auto auto;
@@ -759,6 +761,22 @@
   gap: var(--sp-2) var(--sp-3);
   font-size: var(--fs-sm);
   color: var(--ink-2);
+  width: 100%;
+  padding: var(--sp-1) var(--sp-2);
+  margin-inline: calc(var(--sp-2) * -1);
+  background: none;
+  border: none;
+  border-radius: var(--r-sm);
+  text-align: left;
+  transition: background var(--dur-1) var(--ease);
+}
+
+.stage-row:hover {
+  background: var(--surface-sunken);
+}
+
+.stage-row:hover .stage-value {
+  color: var(--accent-text);
 }
 
 .stage-label {
@@ -779,6 +797,10 @@
   height: 100%;
   min-width: 3px;
   border-radius: var(--r-pill);
+  /* grows left to right, in the pipeline's own reading order */
+  transform-origin: left center;
+  animation: chart-grow-x var(--dur-3) var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
 }
 
 .stage-value {
@@ -805,6 +827,8 @@
 .meter {
   width: min(100%, 220px);
   height: auto;
+  transform-origin: center bottom;
+  animation: chart-settle var(--dur-3) var(--ease) both;
 }
 
 .meter-seg {
@@ -862,6 +886,39 @@
   flex-shrink: 0;
 }
 
+/* ---------- Chart entrance motion ----------
+   Every chart animates along the axis its value is measured on: bars grow
+   from their baseline, radial charts settle into place. Transform and
+   opacity only (never width/height), so nothing reflows mid-animation, and
+   `both` holds the start frame through the stagger delay so no chart ever
+   flashes at full size first. prefers-reduced-motion switches all of this
+   off via the global rule in index.css. */
+@keyframes chart-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes chart-grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes chart-settle {
+  from {
+    opacity: 0;
+    transform: scale(0.94) rotate(-8deg);
+  }
+}
+
+@keyframes chart-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
 /* Documents-by-type donut: chart left, legend right; stacks when narrow.
    Centered vertically and spread so the pair fills the panel rather than
    huddling in the corner. */
@@ -881,10 +938,43 @@
   height: auto;
   aspect-ratio: 1;
   flex-shrink: 0;
+  transform-origin: center;
+  animation: chart-settle var(--dur-3) var(--ease) both;
+}
+
+.donut-legend .legend-item,
+.meter-legend .legend-item {
+  animation: chart-rise var(--dur-2) var(--ease) both;
+  animation-delay: calc(120ms + var(--i, 0) * 45ms);
 }
 
 .donut-slice {
-  transition: opacity var(--dur-1) var(--ease);
+  cursor: pointer;
+  transition: opacity var(--dur-1) var(--ease), stroke-width var(--dur-1) var(--ease);
+}
+
+/* the hovered slice thickens slightly - the mark itself reacts, so the
+   click target is unmistakable before you press it */
+.donut-slice:hover {
+  stroke-width: 30;
+}
+
+/* legend entries double as buttons into the same filtered view */
+.legend-link {
+  background: none;
+  border: none;
+  padding: 2px var(--sp-2);
+  margin-inline: calc(var(--sp-2) * -1);
+  border-radius: var(--r-sm);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+}
+
+.legend-link:hover {
+  background: var(--surface-sunken);
+  color: var(--accent-text);
 }
 
 .donut:hover .donut-slice:not(:hover) {
@@ -998,6 +1088,10 @@
   width: 100%;
   min-height: 3px;
   border-radius: 3px 3px 0 0;
+  /* days rise from the axis, left to right across the fortnight */
+  transform-origin: bottom center;
+  animation: chart-grow-y var(--dur-3) var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 25ms);
 }
 
 .activity-axis {
@@ -1057,14 +1151,10 @@
   border-radius: var(--r-pill);
   background: var(--accent);
   min-width: 3px;
-  animation: bar-grow var(--dur-3) var(--ease) both;
-}
-
-@keyframes bar-grow {
-  from {
-    transform: scaleX(0);
-    transform-origin: left;
-  }
+  /* same grow as the pipeline bars, staggered down the ranking */
+  transform-origin: left center;
+  animation: chart-grow-x var(--dur-3) var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
 }
 
 .project-bar-value {
