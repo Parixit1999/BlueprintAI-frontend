@@ -326,10 +326,6 @@ export default function Dashboard() {
   ]
     .map((s) => ({ ...s, value: stats.documents_by_status[s.key] ?? 0 }))
     .filter((s) => s.value > 0)
-  const regionsTotal = stats.chunks_total ?? 0
-  const corrected = stats.chunks_corrected ?? 0
-  const highConf = stats.chunks_by_confidence.high ?? 0
-  const highPct = regionsTotal > 0 ? Math.round((highConf / regionsTotal) * 100) : 0
 
   return (
     <div>
@@ -371,14 +367,12 @@ export default function Dashboard() {
           to="/documents?assigned=no"
         />
         <Tile
-          label="Extracted regions"
-          value={regionsTotal.toLocaleString()}
+          label="Pages extracted"
+          value={(stats.pages_extracted ?? 0).toLocaleString()}
           hint={
-            regionsTotal > 0
-              ? [`${highPct}% high confidence`, corrected > 0 && `${corrected} corrected`]
-                  .filter(Boolean)
-                  .join(' · ')
-              : 'Ingest documents to build the index'
+            (stats.sheets_total ?? 0) > 0
+              ? `${stats.sheets_total.toLocaleString()} sheets in the registry`
+              : 'Upload documents to extract pages'
           }
           to="/documents?status=ingested"
         />
