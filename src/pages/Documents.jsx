@@ -187,11 +187,17 @@ export default function Documents() {
     setConfirmIngestAll(false)
     setBulkIngesting(true)
     // the visible page may not hold every reviewable document - ask the
-    // server for the full extracted set
+    // server for the full extracted set. Extraction may still be producing
+    // new reviewable documents while we work, so DRAIN in rounds until the
+    // server says the queue is empty rather than stopping after the first
+    // fetch (which made the "Ingest all" count climb back up mid-run).
+    const fetchQueue = async () => {
+      const res = await listFilesPaged({ status: 'extracted', page_size: 100 })
+      return res.items
+    }
     let queue = []
     try {
-      const res = await listFilesPaged({ status: 'extracted', page_size: 100 })
-      queue = res.items
+      queue = await fetchQueue()
     } catch (e) {
       toast.error(e.message)
       setBulkIngesting(false)
@@ -224,6 +230,17 @@ export default function Documents() {
     // show the Processing badges as soon as the claims land
     setTimeout(refresh, 1200)
     await Promise.all(Array.from({ length: 3 }, worker))
+    // keep draining while extraction lands new reviewable documents
+    for (let round = 0; round < 20; round++) {
+      try {
+        queue = await fetchQueue()
+      } catch {
+        break
+      }
+      if (queue.length === 0) break
+      setQueuedIds(new Set(queue.map((f) => f.file_id)))
+      await Promise.all(Array.from({ length: 3 }, worker))
+    }
     setBulkIngesting(false)
     setQueuedIds(new Set())
     refresh()
