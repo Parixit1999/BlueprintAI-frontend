@@ -12,6 +12,7 @@ import {
   IconDownload,
   IconFolderOpen,
   IconLayoutGrid,
+  IconPencil,
   IconPlus,
   IconSearch,
   IconTrash,
@@ -50,7 +51,9 @@ function BookLoadingOverlay() {
 
 // Dense, spreadsheet-first grid on the app's design tokens: minimal padding
 // for maximum data visibility, visible focus for keyboard use, row hover
-// highlight, no decorative motion.
+// highlight, no decorative motion. Column borders on cells AND headers give
+// the ledger-ruled look the Number Book is modeled on - a spreadsheet reads
+// as a spreadsheet.
 const gridTheme = themeQuartz.withParams({
   accentColor: '#2a78d6',
   fontSize: 12.5,
@@ -60,6 +63,9 @@ const gridTheme = themeQuartz.withParams({
   oddRowBackgroundColor: '#fafbfc',
   cellHorizontalPaddingScale: 0.8,
   wrapperBorderRadius: 8,
+  borderColor: '#e4e9ef', // --hairline
+  columnBorder: true,
+  headerColumnBorder: true,
 })
 
 // The book's editable columns; everything else on the row is derived.
@@ -194,10 +200,25 @@ export default function Registry() {
   const [newSheet, setNewSheet] = useState(false)
   const [newSheetName, setNewSheetName] = useState('')
   const [busy, setBusy] = useState(false)
+  const [confirmDeleteRow, setConfirmDeleteRow] = useState(null)
   const gridRef = useRef(null)
   const reverting = useRef(false)
+  // pending "open the drawing" from a single click on DWG #, held for one
+  // double-click window so a double-click edits the row instead of navigating
+  const openTimer = useRef(null)
+  // row values as they were when a row edit started, for diffing on commit
+  const editSnapshot = useRef(null)
   const toast = useToast()
   const navigate = useNavigate()
+
+  const cancelPendingOpen = useCallback(() => {
+    if (openTimer.current) {
+      clearTimeout(openTimer.current)
+      openTimer.current = null
+    }
+  }, [])
+
+  useEffect(() => cancelPendingOpen, [cancelPendingOpen])
 
   // active sheet lives in the URL so it survives navigation and refresh
   const [searchParams, setSearchParams] = useSearchParams()
@@ -241,7 +262,7 @@ export default function Registry() {
       {
         // Excel-style row numbers, doubling as the row's "open" handle:
         // one click on the number opens the drawing page (files, versions,
-        // viewer) - no need to aim for the PDF column on the far right.
+        // viewer). Not editable, so the click needs no dblclick guard.
         headerName: '',
         valueGetter: (p) => (p.node.rowIndex ?? 0) + 1,
         width: 52,
@@ -254,7 +275,73 @@ export default function Registry() {
         tooltipValueGetter: () => 'Open this drawing',
         onCellClicked: (p) => navigate(`/drawings/${p.data.drawing_id}`),
       },
-      { field: 'dwg_number', headerName: 'DWG #', width: 150, pinned: 'left' },
+      {
+        // Row actions sit next to the index so every row exposes the same two
+        // verbs in the same place: edit opens the WHOLE row for editing, the
+        // bin soft-deletes it (recoverable from the Deleted page).
+        headerName: '',
+        colId: 'actions',
+        width: 74,
+        pinned: 'left',
+        editable: false,
+        sortable: false,
+        filter: false,
+        suppressMovable: true,
+        resizable: false,
+        cellClass: 'registry-actions-cell',
+        cellRenderer: (p) => (
+          <span className="registry-actions">
+            <button
+              type="button"
+              className="registry-action"
+              title="Edit this row"
+              aria-label={`Edit row ${p.data?.dwg_number ?? ''}`}
+              onClick={(e) => {
+                e.stopPropagation()
+                cancelPendingOpen()
+                p.api.startEditingCell({
+                  rowIndex: p.node.rowIndex,
+                  colKey: 'dwg_number',
+                })
+              }}
+            >
+              <IconPencil size={15} stroke={1.8} />
+            </button>
+            <button
+              type="button"
+              className="registry-action registry-action-danger"
+              title="Delete this row"
+              aria-label={`Delete row ${p.data?.dwg_number ?? ''}`}
+              onClick={(e) => {
+                e.stopPropagation()
+                cancelPendingOpen()
+                setConfirmDeleteRow(p.data)
+              }}
+            >
+              <IconTrash size={15} stroke={1.8} />
+            </button>
+          </span>
+        ),
+      },
+      {
+        field: 'dwg_number',
+        headerName: 'DWG #',
+        width: 150,
+        pinned: 'left',
+        cellClass: 'registry-open-cell',
+        tooltipValueGetter: () => 'Click to open · double-click to edit the row',
+        // Single click opens the drawing, double-click still edits. Both
+        // gestures start with a click, so the open waits one dblclick window
+        // and is cancelled the moment a second click (or row edit) arrives.
+        onCellClicked: (p) => {
+          if (p.api.getEditingCells().length) return
+          cancelPendingOpen()
+          openTimer.current = setTimeout(
+            () => navigate(`/drawings/${p.data.drawing_id}`),
+            240
+          )
+        },
+      },
       {
         field: 'sheet_count',
         headerName: '# of Sheets',
@@ -281,20 +368,12 @@ export default function Registry() {
         cellClass: 'registry-muted',
       })
     }
-    cols.push({
-      // the book's PDF column: how many scans are attached (0 when none);
-      // click opens the drawing with its files
-      field: 'file_count',
-      headerName: 'PDF',
-      width: 80,
-      editable: false,
-      type: 'numericColumn',
-      cellClass: 'registry-scans',
-      valueFormatter: (p) => String(p.value ?? 0),
-      onCellClicked: (p) => navigate(`/drawings/${p.data.drawing_id}`),
-    })
+    // The old PDF column is gone: opening a drawing's scans is what the row
+    // number and DWG # now do, so the book keeps its width for book data.
     return cols
-  }, [activeTab, navigate])
+  }, [activeTab, navigate, cancelPendingOpen])
+
+  const isBlank = (v) => v === null || v === undefined || v === ''
 
   const defaultColDef = useMemo(
     () => ({
@@ -302,23 +381,48 @@ export default function Registry() {
       resizable: true,
       sortable: true,
       filter: true,
+      // A ruled book marks an empty field with a dash rather than leaving it
+      // blank, so a missing value reads as "nothing recorded" instead of a
+      // rendering gap. Editing still sees the real (empty) value.
+      valueFormatter: (p) => (isBlank(p.value) ? '-' : String(p.value)),
+      cellClassRules: { 'registry-empty': (p) => isBlank(p.value) },
     }),
     []
   )
 
-  // Persist every committed cell edit; on failure, put the old value back.
-  const onCellValueChanged = useCallback(
+  // Row editing: opening one cell opens the whole row, so persistence is
+  // per ROW - snapshot the values when editing starts, then send one PATCH
+  // with whatever actually changed. On failure the snapshot goes back.
+  const onRowEditingStarted = useCallback(
+    (e) => {
+      cancelPendingOpen()
+      editSnapshot.current = { ...e.data }
+    },
+    [cancelPendingOpen]
+  )
+
+  const onRowValueChanged = useCallback(
     async (e) => {
       if (reverting.current) return
-      const field = e.colDef.field
-      if (!EDITABLE.has(field)) return
-      const value = e.newValue === '' || e.newValue === undefined ? null : e.newValue
+      const before = editSnapshot.current
+      editSnapshot.current = null
+      if (!before) return
+      const norm = (v) => (v === '' || v === undefined ? null : v)
+      const changed = {}
+      for (const field of EDITABLE) {
+        if (norm(e.data[field]) !== norm(before[field])) {
+          changed[field] = norm(e.data[field])
+        }
+      }
+      if (Object.keys(changed).length === 0) return
       try {
-        await updateRegistryRow(e.data.drawing_id, { [field]: value })
+        await updateRegistryRow(e.data.drawing_id, changed)
       } catch (err) {
         toast.error(err.message)
         reverting.current = true
-        e.node.setDataValue(field, e.oldValue)
+        for (const field of Object.keys(changed)) {
+          e.node.setDataValue(field, before[field])
+        }
         reverting.current = false
       }
     },
@@ -358,6 +462,24 @@ export default function Registry() {
       toast.error(err.message)
     } finally {
       setBusy(false)
+    }
+  }
+
+  // Bin icon on a single row. Soft delete, so the row moves to the Deleted
+  // page rather than disappearing - the toast says so and offers the way back.
+  async function deleteRow(row) {
+    setBusy(true)
+    try {
+      await deleteDrawing(row.drawing_id)
+      gridRef.current.api.applyTransaction({ remove: [row] })
+      toast.success(`${row.dwg_number || 'Row'} moved to Deleted.`)
+      loadTabs()
+    } catch (err) {
+      toast.error(err.message)
+      loadRows(activeTab)
+    } finally {
+      setBusy(false)
+      setConfirmDeleteRow(null)
     }
   }
 
@@ -422,6 +544,15 @@ export default function Registry() {
                 </Button>
               </Tooltip>
             )}
+            <Tooltip label="Rows deleted from the book" withArrow>
+              <Button
+                variant="default"
+                leftSection={<IconTrash size={16} />}
+                onClick={() => navigate('/registry/deleted')}
+              >
+                Deleted
+              </Button>
+            </Tooltip>
             <Button variant="default" leftSection={<IconDownload size={16} />} onClick={exportBook}>
               Export {activeTab ? 'sheet' : 'book'}
             </Button>
@@ -457,14 +588,27 @@ export default function Registry() {
             defaultColDef={defaultColDef}
             getRowId={(p) => p.data.drawing_id}
             quickFilterText={quickFilter}
-            onCellValueChanged={onCellValueChanged}
+            // Editing a cell opens the WHOLE row, so the pen icon and a
+            // double-click land in the same place: every field of that row
+            // editable at once, committed together.
+            editType="fullRow"
+            onRowEditingStarted={onRowEditingStarted}
+            onRowValueChanged={onRowValueChanged}
+            onCellDoubleClicked={cancelPendingOpen}
             rowSelection={{ mode: 'multiRow', checkboxes: true, headerCheckbox: true }}
+            // pinned left so the checkbox is the FIRST column - unpinned, it
+            // sorted after the pinned index/DWG columns and landed third
+            selectionColumnDef={{
+              pinned: 'left',
+              width: 44,
+              maxWidth: 44,
+              resizable: false,
+              suppressMovable: true,
+            }}
             onSelectionChanged={(e) => setSelectedCount(e.api.getSelectedNodes().length)}
-            // Excel muscle memory: Enter commits and moves down, undo works
+            // Excel muscle memory: Enter commits and moves down
             enterNavigatesVertically
             enterNavigatesVerticallyAfterEdit
-            undoRedoCellEditing
-            undoRedoCellEditingLimit={50}
             stopEditingWhenCellsLoseFocus
             animateRows={false}
           />
@@ -480,10 +624,22 @@ export default function Registry() {
         />
       )}
 
+      {confirmDeleteRow && (
+        <ConfirmDialog
+          title={`Delete ${confirmDeleteRow.dwg_number || 'this row'}?`}
+          message="The row moves to the Deleted page and stops appearing in search and chat. You can restore it from there at any time."
+          confirmLabel="Delete row"
+          danger
+          busy={busy}
+          onConfirm={() => deleteRow(confirmDeleteRow)}
+          onCancel={() => setConfirmDeleteRow(null)}
+        />
+      )}
+
       {confirmDelete && (
         <ConfirmDialog
           title={`Delete ${selectedCount} row${selectedCount === 1 ? '' : 's'}?`}
-          message="This removes the drawings from the registry. Attached scan files stay in Documents and can be reassigned."
+          message="The rows move to the Deleted page and stop appearing in search and chat. Attached scan files stay in Documents, and restoring a row brings them back with it."
           confirmLabel="Delete"
           danger
           busy={busy}

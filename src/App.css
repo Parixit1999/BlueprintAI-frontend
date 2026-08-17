@@ -51,6 +51,63 @@
   height: 100%;
 }
 
+/* --- Hover rail ---------------------------------------------------------
+   Desktop: the sidebar rests as a 68px icon rail and slides open to full
+   width on hover (or keyboard focus). It stays in the page flow, so opening
+   gently PUSHES the content aside rather than covering it - nothing on the
+   screen is ever hidden, it just makes room. Labels fade+slide in slightly
+   after the width so the motion reads as one gesture. prefers-reduced-motion
+   kills all of it via the global rule in index.css. */
+.sidebar:not(.drawer-mode) {
+  width: 68px;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: width var(--dur-3) var(--ease);
+  /* landscape notch: pad the rail, not the icons, so nothing hides */
+  padding-left: calc(var(--sp-3) + env(safe-area-inset-left, 0px));
+}
+
+.sidebar:not(.drawer-mode):hover,
+.sidebar:not(.drawer-mode):focus-within {
+  width: 236px;
+}
+
+/* separator lines above the user and under the brand read as stray dashes
+   on the narrow rail - draw them only while the menu is open */
+.sidebar:not(.drawer-mode) .sidebar-brand,
+.sidebar:not(.drawer-mode) .sidebar-footer-btn {
+  border-color: transparent;
+  transition: border-color var(--dur-2) var(--ease);
+}
+
+.sidebar:not(.drawer-mode):hover :is(.sidebar-brand, .sidebar-footer-btn),
+.sidebar:not(.drawer-mode):focus-within :is(.sidebar-brand, .sidebar-footer-btn) {
+  border-color: var(--navy-line);
+}
+
+/* text blocks are present but dormant in the rail... */
+.nav-label,
+.brand-text,
+.user-text {
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: opacity var(--dur-2) var(--ease), transform var(--dur-2) var(--ease);
+}
+
+/* ...and wake with a beat of delay once the rail is sliding open */
+.sidebar:not(.drawer-mode):hover :is(.nav-label, .brand-text, .user-text),
+.sidebar:not(.drawer-mode):focus-within :is(.nav-label, .brand-text, .user-text) {
+  opacity: 1;
+  transform: none;
+  transition-delay: 60ms;
+}
+
+/* the mobile drawer always shows its labels */
+.sidebar.drawer-mode :is(.nav-label, .brand-text, .user-text) {
+  opacity: 1;
+  transform: none;
+}
+
 .mobile-topbar {
   display: none;
   align-items: center;
@@ -58,6 +115,8 @@
   background: var(--navy);
   color: var(--navy-ink);
   padding: var(--sp-3) var(--sp-4);
+  /* clear the notch / status bar on phones */
+  padding-top: calc(var(--sp-3) + env(safe-area-inset-top, 0px));
 }
 
 .sidebar-brand {
@@ -111,6 +170,11 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* Collapsed, the rail is narrower than the nav labels (which stay in the
+     layout at opacity 0 so they can animate in), so `overflow-y: auto` alone
+     computed overflow-x to `auto` too and painted a light scrollbar thumb
+     across the navy rail. The labels are meant to be clipped, never scrolled. */
+  overflow-x: hidden;
 }
 
 .nav-item {
@@ -211,11 +275,17 @@
   min-width: 0;
   overflow-y: auto;
   padding: var(--sp-6) var(--sp-8) var(--sp-10);
+  /* stay clear of home indicators / gesture bars on notched devices */
+  padding-bottom: calc(var(--sp-10) + env(safe-area-inset-bottom, 0px));
+  padding-right: calc(var(--sp-8) + env(safe-area-inset-right, 0px));
 }
 
-/* the working area gets a max measure so tables don't sprawl on wide screens */
+/* Pages fill the working area edge to edge - on big monitors and TVs the
+   tables and dashboards use the screen instead of leaving a dead zone on
+   the right. Prose keeps its own measure caps (PageHeader descriptions,
+   chat bubbles at 72ch), so readability survives ultrawide widths. */
 .content > * {
-  max-width: 1560px;
+  max-width: none;
 }
 
 /* ==========================================================================
@@ -312,7 +382,7 @@
   white-space: nowrap;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 40em) {
   .login-titleblock {
     display: none;
   }
@@ -639,7 +709,7 @@
 
 /* Tablet: two columns - the top pair keeps its row, activity takes a full
    row (14 day-bars need the width), the two status bars pair up. */
-@media (max-width: 1100px) {
+@media (max-width: 68.75em) {
   .dashboard-panels {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -660,7 +730,7 @@
 }
 
 /* Phone: one column, reading order = importance order. */
-@media (max-width: 680px) {
+@media (max-width: 42.5em) {
   .dashboard-panels {
     grid-template-columns: 1fr;
   }
@@ -674,18 +744,94 @@
   }
 }
 
-.breakdown-bar {
+/* Pipeline: one labelled bar per stage, in processing order. Bars scale to
+   the largest stage so small-but-important stages (Failed) stay visible. */
+.stage-rows {
   display: flex;
-  gap: 2px;
-  height: 10px;
-  border-radius: var(--r-pill);
-  overflow: hidden;
-  background: var(--surface-sunken);
+  flex-direction: column;
+  gap: var(--sp-2);
 }
 
-.breakdown-seg {
+.stage-row {
+  display: grid;
+  grid-template-columns: minmax(0, 40%) 1fr auto auto;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+
+.stage-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stage-track {
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+
+.stage-fill {
+  display: block;
+  height: 100%;
   min-width: 3px;
+  border-radius: var(--r-pill);
+}
+
+.stage-value {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.stage-pct {
+  color: var(--ink-faint);
+  font-size: var(--fs-xs);
+  min-width: 2.6em;
+  text-align: right;
+}
+
+/* Confidence: an arc meter - hero figure for the high-confidence share,
+   with the full high/medium/low split drawn around it. */
+.meter-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.meter {
+  width: min(100%, 220px);
+  height: auto;
+}
+
+.meter-seg {
   transition: opacity var(--dur-1) var(--ease);
+}
+
+.meter:hover .meter-seg:not(:hover) {
+  opacity: 0.45;
+}
+
+.meter-value {
+  font-family: var(--font-ui);
+  font-size: 30px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  fill: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.meter-caption {
+  font-size: 11px;
+  fill: var(--muted);
+}
+
+.meter-legend {
+  margin-top: 0;
+  justify-content: center;
 }
 
 .breakdown-legend {
@@ -1047,6 +1193,14 @@ tbody tr.no-hover:hover {
 .cell-date {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+/* time-of-day line under the date: present but subordinate */
+.cell-time {
+  color: var(--muted);
+  font-size: var(--fs-micro);
 }
 
 .cell-num {
@@ -1606,7 +1760,7 @@ tbody tr.no-hover:hover {
   align-items: start;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 68.75em) {
   .detail-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -2157,7 +2311,9 @@ tbody tr.no-hover:hover {
   padding: var(--sp-3) var(--sp-4);
   border-radius: var(--r-lg);
   line-height: var(--lh-body);
-  max-width: 100%;
+  /* readable measure: prose never runs wider than ~72 characters, however
+     wide the chat pane gets */
+  max-width: min(100%, 72ch);
   overflow-wrap: anywhere;
 }
 
@@ -2635,7 +2791,7 @@ tbody tr.no-hover:hover {
   align-items: start;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 56.25em) {
   .upload-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -3002,6 +3158,70 @@ tbody tr.no-hover:hover {
 .registry-scans {
   color: var(--accent-text);
   cursor: pointer;
+}
+/* placeholder dash for cells with nothing recorded - present, but quiet
+   enough that real data still leads the eye (declared last so it wins over
+   the per-column colours above) */
+.registry-empty {
+  color: var(--ink-faint);
+}
+
+/* DWG # opens the drawing on a single click, so it wears the affordance */
+.registry-open-cell {
+  color: var(--accent-text);
+  cursor: pointer;
+}
+
+/* Row actions: quiet until the row is under the cursor, so 8,000 rows don't
+   read as 16,000 buttons - but always reachable by keyboard. */
+.registry-actions-cell {
+  padding-inline: 2px !important;
+}
+
+.registry-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 100%;
+}
+
+.registry-action {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--ink-faint);
+  opacity: 0.55;
+  transition: opacity var(--dur-1) var(--ease), background var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease);
+}
+
+.ag-row-hover .registry-action,
+.registry-action:focus-visible {
+  opacity: 1;
+}
+
+.registry-action:hover {
+  opacity: 1;
+  background: var(--accent-wash);
+  color: var(--accent-text);
+}
+
+.registry-action-danger:hover {
+  background: var(--critical-wash);
+  color: var(--critical-text);
+}
+
+/* touch devices have no hover to reveal them - keep both icons visible */
+@media (hover: none) {
+  .registry-action {
+    opacity: 1;
+  }
 }
 
 /* Excel-style sheet bar along the bottom edge: picker · Main Book (pinned) ·

@@ -18,7 +18,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { confirmAndIngest, deleteFile, listFilesPaged, retryExtraction } from '../api'
 import AssignModal from '../components/AssignModal'
 import { StatusBadge } from '../components/Badges'
-import CompareModal from '../components/CompareModal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import ErrorState from '../components/ErrorState'
 import Loading from '../components/Loading'
@@ -48,13 +47,15 @@ export default function Documents() {
   const typeFilter = searchParams.get('type') ?? 'all'
   const statusFilter = searchParams.get('status') ?? 'all'
   const assignedFilter = searchParams.get('assigned') ?? 'all'
+  const drawingFilter = searchParams.get('drawing') ?? 'all'
   const dupOnly = searchParams.get('dup') === '1'
-  const sortKey = searchParams.get('sort') ?? 'uploaded'
+  // Default order groups the list by format, most common format first
+  // (server-side `type_count` sort); clicking any header takes over.
+  const sortKey = searchParams.get('sort') ?? 'type_count'
   const sortDir = searchParams.get('dir') ?? 'desc'
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1)
   const [pendingDelete, setPendingDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
-  const [comparing, setComparing] = useState(null)
   const [assigning, setAssigning] = useState(null)
   const [retryingId, setRetryingId] = useState(null)
   const [confirmIngestAll, setConfirmIngestAll] = useState(false)
@@ -110,8 +111,8 @@ export default function Documents() {
   // page costs the same whether the archive has 14 documents or 14,000.
   const listParams = {
     q: query, file_type: typeFilter, status: statusFilter,
-    assigned: assignedFilter, dup_only: dupOnly, sort: sortKey, dir: sortDir,
-    page, page_size: PAGE_SIZE,
+    assigned: assignedFilter, drawing: drawingFilter, dup_only: dupOnly,
+    sort: sortKey, dir: sortDir, page, page_size: PAGE_SIZE,
   }
   function refresh() {
     return listFilesPaged(listParams)
@@ -127,7 +128,7 @@ export default function Documents() {
     const t = setTimeout(refresh, query ? 250 : 0)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, typeFilter, statusFilter, assignedFilter, dupOnly, sortKey, sortDir, page])
+  }, [query, typeFilter, statusFilter, assignedFilter, drawingFilter, dupOnly, sortKey, sortDir, page])
 
   const items = files?.items ?? []
   const types = files?.types ?? []
@@ -330,8 +331,12 @@ export default function Documents() {
         <div className="panel table-panel">
           <table className="table-fixed">
               <colgroup>
+                {/* Name and Assignment are both width-less: with the table's
+                    fixed layout they split the space left over by the fixed
+                    columns exactly in half - equal room for both, and long
+                    values truncate with tooltips as before */}
                 <col />
-                <col style={{ width: 180 }} />
+                <col />
                 <col style={{ width: 74 }} />
                 <col style={{ width: 120 }} />
                 <col style={{ width: 104 }} />
@@ -409,6 +414,21 @@ export default function Documents() {
                 { value: 'no', label: 'Unassigned' },
               ]}
             />
+            {/* the vision verdict: "Not drawings" surfaces photos, forms and
+                other non-drawing uploads for quick verify-and-delete passes */}
+            <Select
+              size="sm"
+              w={148}
+              aria-label="Filter by content verdict"
+              value={drawingFilter}
+              onChange={(v) => setFilter('drawing', v ?? 'all')}
+              allowDeselect={false}
+              data={[
+                { value: 'all', label: 'All content' },
+                { value: 'yes', label: 'Drawings' },
+                { value: 'no', label: 'Not drawings' },
+              ]}
+            />
             <Checkbox
               size="sm"
               label="Duplicates only"
@@ -420,6 +440,7 @@ export default function Documents() {
               typeFilter !== 'all' ||
               statusFilter !== 'all' ||
               assignedFilter !== 'all' ||
+              drawingFilter !== 'all' ||
               dupOnly) && (
               <Button
                 variant="subtle"
@@ -438,8 +459,12 @@ export default function Documents() {
           <div className="panel table-panel">
             <table className="table-fixed">
               <colgroup>
+                {/* Name and Assignment are both width-less: with the table's
+                    fixed layout they split the space left over by the fixed
+                    columns exactly in half - equal room for both, and long
+                    values truncate with tooltips as before */}
                 <col />
-                <col style={{ width: 180 }} />
+                <col />
                 <col style={{ width: 74 }} />
                 <col style={{ width: 120 }} />
                 <col style={{ width: 104 }} />
@@ -469,44 +494,28 @@ export default function Documents() {
               </thead>
               <tbody>
                 {items.map((f) => {
-                  const match = f.similar_documents?.[0]
                   return (
                   <tr key={f.file_id} onClick={() => navigate(`/documents/${f.file_id}`)}>
                     <td className="cell-name">
                       {/* The name owns its own line at full column width; tags
                           sit on the meta row below. Sharing one flex row made
                           long filenames collapse into a vertical rope of
-                          characters and clipped the tag text. */}
+                          characters and clipped the tag text.
+
+                          Duplicate detection still runs server-side and still
+                          drives the page banner and the "Duplicates only"
+                          filter - it just no longer tags individual rows. */}
                       <div className="name-primary" title={f.filename}>
                         {f.filename}
                       </div>
-                      {(f.is_drawing === false || f.is_duplicate || match) && (
+                      {f.is_drawing === false && (
                         <div className="name-meta">
-                          {f.is_drawing === false && (
-                            <span
-                              className="dup-tag not-drawing-tag"
-                              title="The AI judged this image is not an engineering drawing - check it before ingesting."
-                            >
-                              Not a drawing
-                            </span>
-                          )}
-                          {f.is_duplicate && (
-                            <button
-                              className="dup-tag dup-tag-btn"
-                              title="Compare the two drawings side by side"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setComparing(f)
-                              }}
-                            >
-                              Possible duplicate - compare
-                            </button>
-                          )}
-                          {match && (
-                            <span className="dup-match" title={match.filename}>
-                              {Math.round(match.similarity * 100)}% similar to {match.filename}
-                            </span>
-                          )}
+                          <span
+                            className="dup-tag not-drawing-tag"
+                            title="The AI judged this image is not an engineering drawing - check it before ingesting."
+                          >
+                            Not a drawing
+                          </span>
                         </div>
                       )}
                       {f.status === 'failed' && f.error && (
@@ -558,7 +567,13 @@ export default function Documents() {
                       />
                     </td>
                     <td className="cell-date" title={new Date(f.created_at).toLocaleString()}>
-                      {new Date(f.created_at).toLocaleDateString()}
+                      {/* date over time keeps the column narrow on phones while
+                          still giving the full timestamp - registry style,
+                          seconds included since the stack costs no width */}
+                      <div>{new Date(f.created_at).toLocaleDateString('en-CA')}</div>
+                      <div className="cell-time">
+                        {new Date(f.created_at).toLocaleTimeString('en-GB')}
+                      </div>
                     </td>
                     <td className="cell-action" onClick={(e) => e.stopPropagation()}>
                       {/* The action that moves the document forward is the
@@ -652,21 +667,6 @@ export default function Documents() {
           onClose={() => setAssigning(null)}
           onAssigned={() => {
             setAssigning(null)
-            refresh()
-          }}
-        />
-      )}
-
-      {comparing && (
-        <CompareModal
-          file={comparing}
-          // `files` is the paged response object, not a list - passing it
-          // whole made CompareModal call .find on an object and white-screen
-          // the page. `items` is that response's array of documents.
-          allFiles={items}
-          onClose={() => setComparing(null)}
-          onDeleted={() => {
-            setComparing(null)
             refresh()
           }}
         />
