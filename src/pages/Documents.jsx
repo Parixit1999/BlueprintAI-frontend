@@ -58,6 +58,7 @@ export default function Documents() {
   const [retryingId, setRetryingId] = useState(null)
   const [confirmIngestAll, setConfirmIngestAll] = useState(false)
   const [bulkIngesting, setBulkIngesting] = useState(false)
+  const [bulkRetrying, setBulkRetrying] = useState(false)
   const toast = useToast()
   const navigate = useNavigate()
 
@@ -131,6 +132,7 @@ export default function Documents() {
   const types = files?.types ?? []
   const duplicateCount = files?.duplicate_count ?? 0
   const pendingReviewCount = files?.pending_review_count ?? 0
+  const failedCount = files?.failed_count ?? 0
   const totalFiltered = files?.total ?? 0
   const grandTotal = files?.grand_total ?? 0
   const pageCount = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE))
@@ -148,6 +150,39 @@ export default function Documents() {
   // Bulk-confirm every document awaiting review, as extracted (no
   // corrections). Three at a time, same as uploads; each document is
   // protected by the backend's atomic ingest claim.
+
+  // One click re-queues every failed document (deploys and dead workers mark
+  // their in-flight extractions failed; re-running them is routine, not rare).
+  async function retryAllFailed() {
+    setBulkRetrying(true)
+    let queue = []
+    try {
+      const res = await listFilesPaged({ status: 'failed', page_size: 100 })
+      queue = res.items
+    } catch (e) {
+      toast.error(e.message)
+      setBulkRetrying(false)
+      return
+    }
+    let ok = 0
+    const worker = async () => {
+      for (;;) {
+        const f = queue.shift()
+        if (!f) return
+        try {
+          await retryExtraction(f.file_id)
+          ok++
+        } catch {
+          // row keeps its error state; individual Retry still available
+        }
+      }
+    }
+    await Promise.all(Array.from({ length: 3 }, worker))
+    setBulkRetrying(false)
+    refresh()
+    toast.success(`${ok} document${ok === 1 ? '' : 's'} queued for re-extraction.`)
+  }
+
   async function ingestAll() {
     setConfirmIngestAll(false)
     setBulkIngesting(true)
@@ -220,6 +255,16 @@ export default function Documents() {
         onRefresh={refresh}
         actions={
           <>
+            {failedCount > 0 && (
+              <Button
+                variant="light"
+                color="orange"
+                loading={bulkRetrying}
+                onClick={retryAllFailed}
+              >
+                Retry {failedCount} failed
+              </Button>
+            )}
             {pendingReviewCount > 0 && (
               <Button
                 variant="default"
