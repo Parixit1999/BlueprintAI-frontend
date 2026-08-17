@@ -618,6 +618,62 @@
   align-items: start;
 }
 
+/* Dashboard panel composition: a 6-column canvas where the two data-heavy
+   panels split the top row and the three one-line panels split the bottom.
+   Panels in a row stretch to equal height so the row reads as one band. */
+.dashboard-panels {
+  grid-template-columns: repeat(6, 1fr);
+  align-items: stretch;
+}
+
+.panel-projects,
+.panel-types {
+  grid-column: span 3;
+}
+
+.panel-activity,
+.panel-pipeline,
+.panel-confidence {
+  grid-column: span 2;
+}
+
+/* Tablet: two columns - the top pair keeps its row, activity takes a full
+   row (14 day-bars need the width), the two status bars pair up. */
+@media (max-width: 1100px) {
+  .dashboard-panels {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .panel-projects,
+  .panel-types {
+    grid-column: span 1;
+  }
+
+  .panel-activity {
+    grid-column: span 2;
+  }
+
+  .panel-pipeline,
+  .panel-confidence {
+    grid-column: span 1;
+  }
+}
+
+/* Phone: one column, reading order = importance order. */
+@media (max-width: 680px) {
+  .dashboard-panels {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-projects,
+  .panel-types,
+  .panel-activity,
+  .panel-pipeline,
+  .panel-confidence {
+    grid-column: span 1;
+  }
+}
+
 .breakdown-bar {
   display: flex;
   gap: 2px;
@@ -658,6 +714,154 @@
   height: 9px;
   border-radius: 3px;
   flex-shrink: 0;
+}
+
+/* Documents-by-type donut: chart left, legend right; stacks when narrow.
+   Centered vertically and spread so the pair fills the panel rather than
+   huddling in the corner. */
+.donut-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  gap: var(--sp-5);
+  flex-wrap: wrap;
+  height: 100%;
+}
+
+.donut {
+  /* Fill the panel's spare width: grow up to 230px, never below the
+     original 148px; the viewBox scales the center total with it. */
+  width: clamp(148px, 42%, 230px);
+  height: auto;
+  aspect-ratio: 1;
+  flex-shrink: 0;
+}
+
+.donut-slice {
+  transition: opacity var(--dur-1) var(--ease);
+}
+
+.donut:hover .donut-slice:not(:hover) {
+  opacity: 0.45;
+}
+
+.donut-total {
+  font-family: var(--font-ui);
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -0.018em;
+  fill: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.donut-caption {
+  font-size: 11px;
+  fill: var(--muted);
+}
+
+.donut-legend {
+  margin-top: 0;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+/* Activity trend: one row of day-bars per measure, each scaled to its own
+   max (uploads and questions are different units - no shared fake axis). */
+.activity-rows {
+  position: relative; /* anchors the hover stats card */
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+/* Shared hover card: one card per DAY (not per bar), horizontally tracking
+   the hovered column, clamped so it never leaves the panel. Pointer events
+   off so it can't steal the hover that opened it. */
+.activity-tooltip {
+  position: absolute;
+  bottom: calc(100% + var(--sp-1));
+  left: clamp(0px, calc(34% + var(--tip-x) * 0.66 - 60px), calc(100% - 130px));
+  z-index: 3;
+  pointer-events: none;
+  background: var(--ink);
+  color: var(--surface);
+  border-radius: var(--r-sm);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  box-shadow: var(--shadow-md);
+  white-space: nowrap;
+}
+
+.activity-tooltip-date {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.activity-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.activity-tooltip-row strong {
+  margin-left: auto;
+  padding-left: var(--sp-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.activity-bar.hovered {
+  background: var(--accent-wash-2);
+}
+
+.activity-row {
+  display: grid;
+  grid-template-columns: minmax(0, 34%) 1fr;
+  align-items: end;
+  gap: var(--sp-3);
+}
+
+.activity-label {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+
+.activity-label strong {
+  color: var(--ink);
+}
+
+.activity-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 44px;
+}
+
+.activity-bar {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+  background: var(--surface-sunken);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.activity-bar-fill {
+  width: 100%;
+  min-height: 3px;
+  border-radius: 3px 3px 0 0;
+}
+
+.activity-axis {
+  /* sits under the bars: offset by the label column + its gap */
+  margin-left: calc(34% + var(--sp-3));
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--ink-faint);
 }
 
 .project-bars {
