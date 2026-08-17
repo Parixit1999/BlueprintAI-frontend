@@ -8,9 +8,10 @@ import {
   IconFileText,
   IconTable,
   IconUpload,
+  IconUsers,
 } from '@tabler/icons-react'
 import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { changePassword } from '../api'
 import { useAuth } from '../context/AuthContext'
 import Modal from './Modal'
@@ -28,7 +29,7 @@ function Brand() {
   return (
     <div className="sidebar-brand">
       <div className="brand-mark">B</div>
-      <div>
+      <div className="brand-text">
         <div className="brand-name">BlueprintAI</div>
         <div className="brand-sub">Drawing intelligence</div>
       </div>
@@ -48,7 +49,7 @@ function Nav({ onNavigate }) {
           className={({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')}
         >
           <Icon size={18} stroke={1.7} />
-          {label}
+          <span className="nav-label">{label}</span>
         </NavLink>
       ))}
     </nav>
@@ -57,6 +58,7 @@ function Nav({ onNavigate }) {
 
 function Footer() {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const toast = useToast()
   const [changing, setChanging] = useState(false)
   const [current, setCurrent] = useState('')
@@ -90,14 +92,24 @@ function Footer() {
       <Menu position="top-start" width={210} withArrow>
         <Menu.Target>
           <button type="button" className="sidebar-footer sidebar-footer-btn">
-            <div className="avatar">{(user?.username ?? '?')[0].toUpperCase()}</div>
-            <div>
-              <div className="user-name">{user?.username}</div>
-              <div className="user-sub">Workspace owner</div>
+            <div className="avatar">
+              {(user?.full_name || user?.username || '?')[0].toUpperCase()}
+            </div>
+            <div className="user-text">
+              <div className="user-name">{user?.full_name || user?.username}</div>
+              {/* the workspace has teammates now, so this line identifies WHICH
+                  account is signed in rather than asserting ownership */}
+              <div className="user-sub">{user?.email || user?.username}</div>
             </div>
           </button>
         </Menu.Target>
         <Menu.Dropdown>
+          <Menu.Item
+            leftSection={<IconUsers size={15} />}
+            onClick={() => navigate('/users')}
+          >
+            People
+          </Menu.Item>
           <Menu.Item leftSection={<IconKey size={15} />} onClick={() => setChanging(true)}>
             Change password
           </Menu.Item>

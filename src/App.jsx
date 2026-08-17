@@ -15,7 +15,9 @@ import DrawingDetail from './pages/DrawingDetail'
 import { Navigate } from 'react-router-dom'
 import ProjectDetail from './pages/ProjectDetail'
 import Registry from './pages/Registry'
+import DeletedRegistry from './pages/DeletedRegistry'
 import Upload from './pages/Upload'
+import Users from './pages/Users'
 
 export default function App() {
   return (
@@ -38,9 +40,11 @@ export default function App() {
               <Route path="/files" element={<Navigate to="/registry" replace />} />
               <Route path="/upload" element={<Upload />} />
               <Route path="/registry" element={<Registry />} />
+              <Route path="/registry/deleted" element={<DeletedRegistry />} />
               <Route path="/documents" element={<Documents />} />
               <Route path="/documents/:fileId" element={<DocumentDetail />} />
               <Route path="/chat" element={<Chat />} />
+              <Route path="/users" element={<Users />} />
             </Routes>
           </main>
         </div>
