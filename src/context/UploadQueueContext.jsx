@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 import { createContext, useContext, useRef, useState } from 'react'
-import { assignFile, deleteFile, getExtraction, getFileSuggestions, listFiles, uploadFile } from '../api'
+import { assignFile, deleteFile, getFileStatuses, getFileSuggestions, listFiles, uploadFile } from '../api'
 import { useToast } from '../components/Toast'
 
 export const SUPPORTED = ['dxf', 'dwg', 'rvt', 'pdf', 'png', 'jpg', 'jpeg', 'tif', 'tiff', 'bmp', 'webp', 'heic', 'heif']
@@ -53,39 +53,19 @@ export function UploadQueueProvider({ children }) {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...changes } : i)))
   }
 
-  // Adaptive parallel ingestion. Starts at 3 documents at once, ramps toward
-  // MAX while extractions succeed, and halves itself if the AI provider
-  // starts rate-limiting - so batches run as fast as the account's quotas
-  // allow without hand-tuning. (True autoscaling - server-side workers - is
-  // an AWS-deployment concern; this governs the browser's upload queue.)
-  const MIN_WORKERS = 2
-  const MAX_WORKERS = 8
-  const START_WORKERS = 3
-
-  // Upload returns in seconds (the server stores the file and extracts in
-  // the background); we then POLL the document status until extraction
-  // lands. No HTTP request ever waits on the AI, so proxy timeouts cannot
-  // fake a failure - a 12-minute multi-sheet scan just polls longer.
+  // Two decoupled stages, so a slow extraction never blocks an upload:
+  //   1. an upload pool pushes EVERY file to the server as fast as the
+  //      network allows (the server queues extraction itself and paces it
+  //      with its own per-worker concurrency limit), then
+  //   2. ONE poller tracks every processing file with a single batched
+  //      status request per tick - N documents cost one HTTP call, not N.
+  const UPLOAD_WORKERS = 5
   const POLL_MS = 4000
 
-  async function waitForExtraction(fileId, patchItem) {
-    for (;;) {
-      await new Promise((r) => setTimeout(r, POLL_MS))
-      let doc
-      try {
-        doc = await getExtraction(fileId)
-      } catch {
-        continue // transient fetch problem - keep polling
-      }
-      if (doc.status === 'failed') {
-        throw new Error(doc.error ?? 'Processing failed. Use Retry from Documents.')
-      }
-      if (doc.status !== 'uploaded') return doc // extracted (or beyond)
-      patchItem()
-    }
-  }
+  // fileId -> queue item, for everything uploaded but not yet extracted
+  const pendingRef = useRef(new Map())
 
-  async function processOne(next) {
+  async function uploadOne(next) {
     patch(next.id, { status: 'uploading', percent: 0 })
     const handle = {}
     abortHandles.current.set(next.id, handle)
@@ -94,70 +74,13 @@ export function UploadQueueProvider({ children }) {
         next.file,
         next.name,
         (p) => {
-          if (p.phase === 'uploading') patch(next.id, { status: 'uploading', percent: p.percent })
-          else patch(next.id, { status: 'processing' })
+          patch(next.id, { percent: p })
         },
         next.folderId ?? null,
         handle,
       )
       patch(next.id, { status: 'processing', fileId: res.file_id })
-      const doc = await waitForExtraction(res.file_id, () =>
-        patch(next.id, { status: 'processing' }),
-      )
-      // scoped upload: attach straight to the drawing the user uploaded from,
-      // bypassing the suggestion step entirely
-      if (next.projectId && !next.drawingId) {
-        // project-scoped upload: file a new drawing under that project
-        try {
-          await assignFile(res.file_id, { new_drawing: { project_id: next.projectId } })
-          patch(next.id, {
-            status: 'done',
-            fileId: res.file_id,
-            regions: doc.chunks.length,
-            autoAssignment: { project_name: next.projectName ?? 'this project' },
-          })
-          return 'ok'
-        } catch {
-          // filing failed - fall through to normal suggestion handling
-        }
-      }
-      if (next.drawingId) {
-        try {
-          await assignFile(res.file_id, { drawing_id: next.drawingId })
-          patch(next.id, {
-            status: 'done',
-            fileId: res.file_id,
-            regions: doc.chunks.length,
-            autoAssignment: { dwg_number: next.drawingName ?? 'this drawing' },
-          })
-          return 'ok'
-        } catch {
-          // attach failed - fall through to normal suggestion handling
-        }
-      }
-      // the matcher ran server-side in the background: the document record
-      // now carries the outcome; suggestions come from the standing endpoint
-      let topDrawing = null
-      let topProject = null
-      if (!doc.dwg_number) {
-        try {
-          const sugg = await getFileSuggestions(res.file_id)
-          topDrawing = (sugg.drawing_suggestions ?? [])[0] ?? null
-          topProject = (sugg.project_suggestions ?? [])[0] ?? null
-        } catch {
-          // suggestions are a nicety - the Documents page offers Assign anyway
-        }
-      }
-      patch(next.id, {
-        status: 'done',
-        fileId: res.file_id,
-        regions: doc.chunks.length,
-        autoAssignment:
-          doc.dwg_number && doc.auto_assigned ? { dwg_number: doc.dwg_number } : null,
-        topDrawing,
-        topProject,
-      })
-      return 'ok'
+      pendingRef.current.set(res.file_id, next)
     } catch (e) {
       if (e.canceled) {
         // the abort may have raced a request that already reached the server:
@@ -176,9 +99,86 @@ export function UploadQueueProvider({ children }) {
         return
       }
       patch(next.id, { status: 'error', error: e.message })
-      return /throttl|rate limit|too many requests|slow down/i.test(e.message)
-        ? 'throttled'
-        : 'error'
+    } finally {
+      abortHandles.current.delete(next.id)
+    }
+  }
+
+  // A document finished extracting: run the same filing flow as before -
+  // scoped attach, or suggestions for the Assign step.
+  async function finishOne(next, row) {
+    if (next.projectId && !next.drawingId) {
+      try {
+        await assignFile(row.file_id, { new_drawing: { project_id: next.projectId } })
+        patch(next.id, {
+          status: 'done',
+          fileId: row.file_id,
+          regions: row.region_count,
+          autoAssignment: { project_name: next.projectName ?? 'this project' },
+        })
+        return
+      } catch {
+        // filing failed - fall through to normal suggestion handling
+      }
+    }
+    if (next.drawingId) {
+      try {
+        await assignFile(row.file_id, { drawing_id: next.drawingId })
+        patch(next.id, {
+          status: 'done',
+          fileId: row.file_id,
+          regions: row.region_count,
+          autoAssignment: { dwg_number: next.drawingName ?? 'this drawing' },
+        })
+        return
+      } catch {
+        // attach failed - fall through to normal suggestion handling
+      }
+    }
+    let topDrawing = null
+    let topProject = null
+    if (!row.dwg_number) {
+      try {
+        const sugg = await getFileSuggestions(row.file_id)
+        topDrawing = (sugg.drawing_suggestions ?? [])[0] ?? null
+        topProject = (sugg.project_suggestions ?? [])[0] ?? null
+      } catch {
+        // suggestions are a nicety - the Documents page offers Assign anyway
+      }
+    }
+    patch(next.id, {
+      status: 'done',
+      fileId: row.file_id,
+      regions: row.region_count,
+      autoAssignment:
+        row.dwg_number && row.auto_assigned ? { dwg_number: row.dwg_number } : null,
+      topDrawing,
+      topProject,
+    })
+  }
+
+  async function pollTick() {
+    const ids = [...pendingRef.current.keys()]
+    if (ids.length === 0) return
+    let res
+    try {
+      res = await getFileStatuses(ids.slice(0, 500))
+    } catch {
+      return // transient fetch problem - next tick retries
+    }
+    for (const row of res.statuses ?? []) {
+      const next = pendingRef.current.get(row.file_id)
+      if (!next) continue
+      if (row.status === 'failed') {
+        pendingRef.current.delete(row.file_id)
+        patch(next.id, {
+          status: 'error',
+          error: row.error ?? 'Processing failed. Use Retry from Documents.',
+        })
+      } else if (row.status !== 'uploaded') {
+        pendingRef.current.delete(row.file_id)
+        finishOne(next, row) // async filing; poller moves on
+      }
     }
   }
 
@@ -188,6 +188,7 @@ export function UploadQueueProvider({ children }) {
       return
     }
     runningRef.current = { kick: () => {} }
+
     const claimNext = () =>
       new Promise((resolve) =>
         setItems((prev) => {
@@ -200,34 +201,46 @@ export function UploadQueueProvider({ children }) {
         }),
       )
 
-    const state = { target: START_WORKERS, active: 0 }
-    await new Promise((finish) => {
-      const spawnOne = () => {
-        state.active++
-        claimNext().then((next) => {
-          if (!next) {
-            state.active--
-            if (state.active === 0) finish()
-            return
-          }
-          processOne(next).then((outcome) => {
-            if (outcome === 'throttled') {
-              state.target = Math.max(MIN_WORKERS, Math.ceil(state.target / 2))
-            } else if (outcome === 'ok') {
-              state.target = Math.min(MAX_WORKERS, state.target + 1)
-            }
-            state.active--
-            maybeSpawn()
-            if (state.active === 0) finish()
-          })
+    // Supervisor: keeps the upload pool full AND polls, until both are idle.
+    const uploads = new Set()
+    let lastPoll = 0
+    let wake = () => {}
+    runningRef.current = { kick: () => wake() }
+    for (;;) {
+      while (uploads.size < UPLOAD_WORKERS) {
+        const next = await claimNext()
+        if (!next) break
+        const job = uploadOne(next)
+        uploads.add(job)
+        job.finally(() => {
+          uploads.delete(job)
+          wake()
         })
       }
-      const maybeSpawn = () => {
-        while (state.active < state.target) spawnOne()
+      if (Date.now() - lastPoll >= POLL_MS) {
+        lastPoll = Date.now()
+        await pollTick()
       }
-      runningRef.current = { kick: maybeSpawn }
-      maybeSpawn()
-    })
+      if (uploads.size === 0 && pendingRef.current.size === 0) {
+        const more = await claimNext()
+        if (!more) break
+        const job = uploadOne(more)
+        uploads.add(job)
+        job.finally(() => {
+          uploads.delete(job)
+          wake()
+        })
+      }
+      // sleep until the next poll is due, or until a worker frees up /
+      // new files arrive (kick)
+      await new Promise((r) => {
+        const t = setTimeout(r, pendingRef.current.size > 0 ? 1000 : 400)
+        wake = () => {
+          clearTimeout(t)
+          r()
+        }
+      })
+    }
     runningRef.current = null
   }
 
