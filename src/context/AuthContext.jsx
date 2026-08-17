@@ -30,7 +30,9 @@ export function AuthProvider({ children, loginScreen }) {
   const login = useCallback(async (username, password) => {
     const res = await api.login(username, password)
     api.setToken(res.token)
-    setUser({ username: res.username })
+    // /me is the single source of truth for the profile (name, email), so the
+    // sidebar shows the same thing right after signing in as after a reload
+    setUser(await api.getMe().catch(() => ({ username: res.username })))
   }, [])
 
   const logout = useCallback(async () => {

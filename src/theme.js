@@ -43,12 +43,14 @@ export const theme = createTheme({
   fontFamilyMonospace:
     "ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace",
 
+  /* Sizes reference the fluid tokens in index.css directly, so Mantine
+     components ride the same 375px -> 1560px ramp as the hand-rolled CSS. */
   fontSizes: {
-    xs: '0.75rem',
-    sm: '0.8125rem',
-    md: '0.875rem',
-    lg: '1rem',
-    xl: '1.125rem',
+    xs: 'var(--fs-xs)',
+    sm: 'var(--fs-sm)',
+    md: 'var(--fs-body)',
+    lg: 'var(--fs-h2)',
+    xl: 'clamp(1.0313rem, 0.992rem + 0.166vw, 1.125rem)', /* 16.5 -> 18 (the original) by 1280px */
   },
   lineHeights: {
     xs: '1.4',
@@ -60,14 +62,20 @@ export const theme = createTheme({
   headings: {
     fontWeight: '650',
     sizes: {
-      h1: { fontSize: '1.75rem', lineHeight: '1.22' },
-      h2: { fontSize: '1.375rem', lineHeight: '1.25' },
-      h3: { fontSize: '1rem', lineHeight: '1.3' },
-      h4: { fontSize: '0.875rem', lineHeight: '1.35' },
+      h1: { fontSize: 'var(--fs-display)', lineHeight: '1.22' },
+      h2: { fontSize: 'var(--fs-h1)', lineHeight: '1.25' },
+      h3: { fontSize: 'var(--fs-h2)', lineHeight: '1.3' },
+      h4: { fontSize: 'var(--fs-h3)', lineHeight: '1.35' },
     },
   },
 
-  radius: { xs: '4px', sm: '6px', md: '10px', lg: '14px', xl: '18px' },
+  radius: {
+    xs: '0.25rem',
+    sm: 'var(--r-sm)',
+    md: 'var(--r-md)',
+    lg: 'var(--r-lg)',
+    xl: '1.125rem',
+  },
   defaultRadius: 'md',
   cursorType: 'pointer',
   focusRing: 'auto',

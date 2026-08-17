@@ -215,31 +215,110 @@ function ActivityRows({ days }) {
   )
 }
 
-function BreakdownBar({ parts }) {
+/**
+ * The pipeline is a staged process, so each stage gets its own labelled row
+ * with its own bar: small stages stay visible (a 3-document "Failed" segment
+ * vanished inside a single stacked bar) and the rows read top-to-bottom in
+ * processing order, which is information the old bar threw away.
+ */
+function StageBars({ parts }) {
   const total = parts.reduce((s, p) => s + p.value, 0)
-  if (total === 0) return <p className="empty-note">No data yet.</p>
+  if (total === 0) return <p className="empty-note">No documents yet.</p>
+  const max = Math.max(...parts.map((p) => p.value), 1)
   return (
-    <>
-      <div className="breakdown-bar">
+    <div className="stage-rows">
+      {parts.map((p) => {
+        const pct = Math.round((p.value / total) * 100)
+        return (
+          <div
+            key={p.label}
+            className="stage-row"
+            title={`${p.label}: ${p.value.toLocaleString()} (${pct}% of all documents)`}
+          >
+            <span className="stage-label">{p.label}</span>
+            <span className="stage-track">
+              <span
+                className="stage-fill"
+                style={{ width: `${(p.value / max) * 100}%`, background: p.color }}
+              />
+            </span>
+            <span className="stage-value tabular">{p.value.toLocaleString()}</span>
+            <span className="stage-pct tabular">{pct}%</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/**
+ * Confidence is an ordered quality scale whose headline question is "how much
+ * of the index is trustworthy?" - so it reads as a meter: one hero figure for
+ * the high-confidence share, drawn on a semicircular arc that still shows the
+ * full high/medium/low split. Levels keep the app's status colours and are
+ * named in the legend, so the meaning never rides on colour alone.
+ */
+function ConfidenceMeter({ parts }) {
+  const total = parts.reduce((s, p) => s + p.value, 0)
+  if (total === 0) return <p className="empty-note">No extracted regions yet.</p>
+  const high = parts.find((p) => p.key === 'high')?.value ?? 0
+  const highPct = Math.round((high / total) * 100)
+  // semicircle: r=70 centred at (100,90); arc length = pi * r
+  const ARC = Math.PI * 70
+  const GAP = parts.filter((p) => p.value > 0).length > 1 ? 2 : 0
+  let offset = 0
+  return (
+    <div className="meter-wrap">
+      <svg
+        viewBox="0 0 200 104"
+        className="meter"
+        role="img"
+        aria-label={`${highPct}% of extracted regions are high confidence`}
+      >
+        <path
+          d="M 30 90 A 70 70 0 0 1 170 90"
+          fill="none"
+          stroke="var(--surface-sunken)"
+          strokeWidth="20"
+        />
         {parts
           .filter((p) => p.value > 0)
-          .map((p) => (
-            <div
-              key={p.label}
-              className="breakdown-seg"
-              style={{ width: `${(p.value / total) * 100}%`, background: p.color }}
-            />
-          ))}
-      </div>
-      <div className="breakdown-legend">
+          .map((p) => {
+            const len = (p.value / total) * ARC
+            const seg = (
+              <path
+                key={p.label}
+                className="meter-seg"
+                d="M 30 90 A 70 70 0 0 1 170 90"
+                fill="none"
+                stroke={p.color}
+                strokeWidth="20"
+                strokeLinecap="butt"
+                strokeDasharray={`${Math.max(len - GAP, 0.5)} ${ARC}`}
+                strokeDashoffset={-offset}
+              >
+                <title>{`${p.label}: ${p.value.toLocaleString()} (${Math.round((p.value / total) * 100)}%)`}</title>
+              </path>
+            )
+            offset += len
+            return seg
+          })}
+        <text x="100" y="78" textAnchor="middle" className="meter-value">
+          {highPct}%
+        </text>
+        <text x="100" y="96" textAnchor="middle" className="meter-caption">
+          high confidence
+        </text>
+      </svg>
+      <div className="breakdown-legend meter-legend">
         {parts.map((p) => (
           <span key={p.label} className="legend-item">
             <span className="legend-swatch" style={{ background: p.color }} />
-            {p.label} <strong>{p.value}</strong>
+            {p.label} <strong>{p.value.toLocaleString()}</strong>
           </span>
         ))}
       </div>
-    </>
+    </div>
   )
 }
 
@@ -310,6 +389,7 @@ export default function Dashboard() {
       color: TYPE_COLOR[type] ?? TYPE_COLOR_OTHER,
     }))
   const confParts = CONF_META.map((c) => ({
+    key: c.key,
     label: c.label,
     value: stats.chunks_by_confidence[c.key] ?? 0,
     color: c.color,
@@ -406,11 +486,11 @@ export default function Dashboard() {
         </div>
         <div className="panel panel-pipeline">
           <h2>Document pipeline</h2>
-          <BreakdownBar parts={statusParts} />
+          <StageBars parts={statusParts} />
         </div>
         <div className="panel panel-confidence">
           <h2>Extraction confidence</h2>
-          <BreakdownBar parts={confParts} />
+          <ConfidenceMeter parts={confParts} />
         </div>
       </div>
     </div>

@@ -455,6 +455,33 @@ export function createRegistryRow(fields) {
   })
 }
 
+// Accounts. One shared workspace with no roles - any signed-in teammate can
+// see the list and add colleagues.
+export function listUsers() {
+  return request('/auth/users')
+}
+
+export function createUser(fields) {
+  return request('/auth/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fields),
+  })
+}
+
+export function deleteUser(userId) {
+  return request(`/auth/users/${userId}`, { method: 'DELETE' })
+}
+
+// Deleting a registry row is a soft delete: these two power the Deleted page.
+export function listDeletedRegistryRows() {
+  return request('/registry/deleted')
+}
+
+export function restoreRegistryRow(drawingId) {
+  return request(`/registry/rows/${drawingId}/restore`, { method: 'POST' })
+}
+
 export async function downloadRegistryExport(projectId = null) {
   const path = projectId ? `/registry/export?project_id=${projectId}` : '/registry/export'
   trackStart()

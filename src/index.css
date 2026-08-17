@@ -60,39 +60,45 @@
   --sidebar-ink: var(--navy-ink);
   --sidebar-ink-2: var(--navy-ink-2);
 
-  /* ---- type ---- */
+  /* ---- type (fluid) ----
+     Every step is a clamp() on a 375px -> 1280px viewport ramp. The CEILING
+     of each ramp is the app's original fixed size, reached by 1280px - so
+     laptops and big monitors render exactly the design as it always was,
+     and the fluidity only scales DOWN for tablets and phones. */
   --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
     Arial, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas,
     'Liberation Mono', monospace;
 
-  --fs-display: 1.75rem; /* 28 */
-  --fs-h1: 1.375rem; /* 22 */
-  --fs-h2: 1rem; /* 16 */
-  --fs-h3: 0.875rem; /* 14 */
-  --fs-body: 0.875rem; /* 14 */
-  --fs-sm: 0.8125rem; /* 13 */
-  --fs-xs: 0.75rem; /* 12 */
-  --fs-micro: 0.6875rem; /* 11 */
+  --fs-display: clamp(1.5rem, 1.396rem + 0.442vw, 1.75rem); /* 24 -> 28 (the original) by 1280px */
+  --fs-h1: clamp(1.1875rem, 1.11rem + 0.331vw, 1.375rem); /* 19 -> 22 */
+  --fs-h2: clamp(0.9063rem, 0.867rem + 0.166vw, 1rem); /* 14.5 -> 16 */
+  --fs-h3: clamp(0.8125rem, 0.787rem + 0.11vw, 0.875rem); /* 13 -> 14 */
+  --fs-body: clamp(0.8125rem, 0.787rem + 0.11vw, 0.875rem); /* 13 -> 14 */
+  --fs-sm: clamp(0.7656rem, 0.746rem + 0.083vw, 0.8125rem); /* 12.25 -> 13 */
+  --fs-xs: clamp(0.7188rem, 0.706rem + 0.055vw, 0.75rem); /* 11.5 -> 12 */
+  --fs-micro: clamp(0.6563rem, 0.643rem + 0.055vw, 0.6875rem); /* 10.5 -> 11 */
 
   --lh-tight: 1.22;
   --lh-snug: 1.35;
   --lh-body: 1.55;
 
-  /* ---- space ---- */
-  --sp-1: 4px;
-  --sp-2: 8px;
-  --sp-3: 12px;
-  --sp-4: 16px;
-  --sp-5: 20px;
-  --sp-6: 24px;
-  --sp-8: 32px;
-  --sp-10: 40px;
+  /* ---- space (fluid) ----
+     Same ramp as type, so padding and gaps breathe WITH the text. The two
+     smallest steps stay fixed rem - hairline spacing has no room to flex. */
+  --sp-1: 0.25rem; /* 4 */
+  --sp-2: 0.5rem; /* 8 */
+  --sp-3: clamp(0.625rem, 0.573rem + 0.221vw, 0.75rem); /* 10 -> 12 (the original) by 1280px */
+  --sp-4: clamp(0.8125rem, 0.735rem + 0.331vw, 1rem); /* 13 -> 16 */
+  --sp-5: clamp(1rem, 0.896rem + 0.442vw, 1.25rem); /* 16 -> 20 */
+  --sp-6: clamp(1.1875rem, 1.058rem + 0.552vw, 1.5rem); /* 19 -> 24 */
+  --sp-8: clamp(1.5rem, 1.293rem + 0.884vw, 2rem); /* 24 -> 32 */
+  --sp-10: clamp(1.875rem, 1.616rem + 1.105vw, 2.5rem); /* 30 -> 40 */
 
-  /* ---- radius ---- */
-  --r-sm: 6px;
-  --r-md: 10px;
-  --r-lg: 14px;
+  /* ---- radius (rem so it scales with user zoom) ---- */
+  --r-sm: 0.375rem;
+  --r-md: 0.625rem;
+  --r-lg: 0.875rem;
   --r-pill: 999px;
   --radius: var(--r-md); /* legacy alias */
 
@@ -114,6 +120,13 @@
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+html {
+  /* iOS Safari inflates text after orientation changes unless told not to -
+     the fluid ramp is the only thing allowed to resize type */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 html,
@@ -205,6 +218,29 @@ table,
   background: var(--ink-faint);
   background-clip: content-box;
 }
+
+/* Touch parity: on coarse pointers every control clears a thumb-safe
+   target. em-based so it tracks the fluid type ramp; the 40px floor is
+   absolute. Dense desktop mouse layouts are untouched. */
+@media (pointer: coarse) {
+  button,
+  [role='button'],
+  [role='tab'],
+  input,
+  select {
+    min-height: max(2.5em, 44px);
+  }
+}
+
+/* ---- breakpoint scale (reference) ----
+   All media queries in the app use em so they respect the user's text-size
+   setting. The scale, smallest to largest:
+     40em (640)  tile grids tighten
+     42.5em (680)  dashboard panels stack
+     48em (768)  sidebar -> drawer; the mobile layout line
+     56.25em (900)  chat drops to two panes
+     62em / 68.75em / 75em / 90em  wide-layout refinements
+   New rules must pick from this scale rather than invent widths. */
 
 @media (prefers-reduced-motion: reduce) {
   *,

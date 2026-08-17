@@ -3,7 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover lets the app paint edge-to-edge on notched
+         devices; CSS env(safe-area-inset-*) then keeps content clear of
+         the notch, home indicator, and gesture bars -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>BlueprintAI</title>
   </head>
   <body>
