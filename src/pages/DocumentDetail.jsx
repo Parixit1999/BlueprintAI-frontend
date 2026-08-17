@@ -29,6 +29,8 @@ export default function DocumentDetail() {
   const [dwgNumber, setDwgNumber] = useState(null)
   const [projectName, setProjectName] = useState(null)
   const [showAllRegions, setShowAllRegions] = useState(false)
+  // the document's own sheet count, read from the file itself
+  const [filePageCount, setFilePageCount] = useState(null)
 
   useEffect(() => {
     getExtraction(fileId)
@@ -39,6 +41,7 @@ export default function DocumentDetail() {
         setIsDrawing(res.is_drawing ?? null)
         setDwgNumber(res.dwg_number ?? null)
         setProjectName(res.project_name ?? null)
+        setFilePageCount(res.page_count ?? null)
       })
       .catch((e) => toast.error(e.message))
       .finally(() => setLoadingChunks(false))
@@ -64,7 +67,14 @@ export default function DocumentDetail() {
   const [sheetScope, setSheetScope] = useState('sheet')
 
   const reviewing = status === 'extracted'
-  const pageCount = Math.max(1, ...chunks.map((c) => c.page ?? 1))
+  // The DOCUMENT's sheet count, not "the last page extraction reached".
+  // A capped extraction used to shrink this - a 229-sheet set read as 139,
+  // and the sheets past that point could not be opened at all.
+  const pageCount = Math.max(
+    filePageCount ?? 1,
+    1,
+    ...chunks.map((c) => c.page ?? 1)
+  )
 
   function goToPage(p) {
     setCurrentPage(p)

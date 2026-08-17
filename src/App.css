@@ -3256,6 +3256,23 @@ tbody tr.no-hover:hover {
   color: var(--ink-faint);
 }
 
+/* Full-text tooltip for long registry cells: a readable paragraph, not the
+   browser's one-line strip. Sized to a comfortable measure, scrolls if the
+   summary is very long. */
+.grid-tooltip {
+  max-width: 44ch;
+  max-height: 40vh;
+  overflow-y: auto;
+  white-space: normal;
+  background: var(--ink);
+  color: var(--surface);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+  box-shadow: var(--shadow-md);
+}
+
 /* DWG # opens the drawing on a single click, so it wears the affordance */
 .registry-open-cell {
   color: var(--accent-text);
