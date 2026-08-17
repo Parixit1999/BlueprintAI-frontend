@@ -70,11 +70,22 @@ export function UploadQueueProvider({ children }) {
     const handle = {}
     abortHandles.current.set(next.id, handle)
     try {
+      let lastPercent = -1
       const res = await uploadFile(
         next.file,
         next.name,
         (p) => {
-          patch(next.id, { percent: p })
+          // {phase: 'uploading', percent} while bytes move, {phase: 'processing'}
+          // once the body is sent. Skip sub-2% steps: with ~200 rows in the
+          // list, every patch re-renders all of them.
+          if (p.phase === 'uploading') {
+            if (p.percent - lastPercent >= 2 || p.percent >= 100) {
+              lastPercent = p.percent
+              patch(next.id, { status: 'uploading', percent: p.percent })
+            }
+          } else {
+            patch(next.id, { status: 'processing' })
+          }
         },
         next.folderId ?? null,
         handle,
