@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import * as api from '../api'
+import Loading from '../components/Loading'
 
 const AuthContext = createContext(null)
 export const useAuth = () => useContext(AuthContext)
@@ -38,7 +39,11 @@ export function AuthProvider({ children, loginScreen }) {
     setUser(null)
   }, [])
 
-  if (checking) return null // brief token re-validation on refresh
+  // Token re-validation on refresh is usually a flash - but if the backend
+  // is slow or restarting it can take seconds, and rendering null here left
+  // the ENTIRE app as a white page for that whole window. Show the branded
+  // loading state instead so a stalled backend looks like loading, not death.
+  if (checking) return <Loading label="Signing you in…" py={120} />
   if (!user) return loginScreen({ onLogin: login })
   return <AuthContext.Provider value={{ user, logout }}>{children}</AuthContext.Provider>
 }
