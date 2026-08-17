@@ -419,6 +419,16 @@ export function moveFile(fileId, folderId) {
   })
 }
 
+// One request answers "where are all my uploads?" - status + region count
+// for up to 500 files, without the heavy extraction payload.
+export function getFileStatuses(ids) {
+  return request('/files/statuses', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  })
+}
+
 // --- Registry (spreadsheet view of the Drawings Number Book) ---
 
 export function listRegistryTabs() {
