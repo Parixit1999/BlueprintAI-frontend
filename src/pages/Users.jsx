@@ -245,19 +245,19 @@ export default function Users() {
               type="email"
               placeholder="e.g. cbergeron@msmmeng.com"
               value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.currentTarget.value }))}
+              onChange={(e) => {
+                const email = e.currentTarget.value
+                setForm((f) => ({ ...f, email }))
+              }}
             />
             <TextInput
               label="Username"
               description="What they type to sign in"
               value={form.username}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  username: e.currentTarget.value,
-                  usernameTouched: true,
-                }))
-              }
+              onChange={(e) => {
+                const username = e.currentTarget.value
+                setForm((f) => ({ ...f, username, usernameTouched: true }))
+              }}
               required
             />
             <Select
@@ -273,7 +273,10 @@ export default function Users() {
               label="Temporary password"
               description="At least 8 characters. They can change it from the menu after signing in."
               value={form.password}
-              onChange={(e) => setForm((f) => ({ ...f, password: e.currentTarget.value }))}
+              onChange={(e) => {
+                const password = e.currentTarget.value
+                setForm((f) => ({ ...f, password }))
+              }}
               autoComplete="new-password"
               required
             />

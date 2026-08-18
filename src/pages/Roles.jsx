@@ -210,7 +210,12 @@ export default function Roles() {
               label="Role name"
               placeholder="e.g. Field engineer"
               value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.currentTarget.value }))}
+              onChange={(e) => {
+                // capture before the updater: React nulls currentTarget after
+                // dispatch, and functional updaters can be replayed
+                const name = e.currentTarget.value
+                setForm((f) => ({ ...f, name }))
+              }}
               required
               autoFocus
             />
@@ -224,14 +229,15 @@ export default function Roles() {
                     key={p.value}
                     label={p.label}
                     checked={form.pages.includes(p.value)}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const checked = e.currentTarget.checked
                       setForm((f) => ({
                         ...f,
-                        pages: e.currentTarget.checked
+                        pages: checked
                           ? [...f.pages, p.value]
                           : f.pages.filter((x) => x !== p.value),
                       }))
-                    }
+                    }}
                   />
                 ))}
               </Stack>
@@ -240,9 +246,10 @@ export default function Roles() {
               label="Access all Number Book sheets"
               description="Off = pick the specific sheets this role may see (applies to the book, documents, and chat answers)"
               checked={form.all_sheets}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, all_sheets: e.currentTarget.checked }))
-              }
+              onChange={(e) => {
+                const allSheets = e.currentTarget.checked
+                setForm((f) => ({ ...f, all_sheets: allSheets }))
+              }}
             />
             {!form.all_sheets && (
               <MultiSelect
