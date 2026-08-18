@@ -919,6 +919,32 @@
   }
 }
 
+/* Role cards (admin): one card per role, laid out like the dashboard
+   panels; the grid wraps naturally on smaller screens. */
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--sp-3);
+}
+
+.role-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.role-card-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-2);
+  border-top: 1px solid var(--hairline);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Documents-by-type donut: chart left, legend right; stacks when narrow.
    Centered vertically and spread so the pair fills the panel rather than
    huddling in the corner. */

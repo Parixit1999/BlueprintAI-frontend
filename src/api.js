@@ -455,8 +455,40 @@ export function createRegistryRow(fields) {
   })
 }
 
-// Accounts. One shared workspace with no roles - any signed-in teammate can
-// see the list and add colleagues.
+// Accounts and roles. Admin-only server-side; the UI only shows these
+// controls to admins.
+export function updateUser(userId, fields) {
+  return request(`/auth/users/${userId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fields),
+  })
+}
+
+export function listRoles() {
+  return request('/auth/roles')
+}
+
+export function createRole(fields) {
+  return request('/auth/roles', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fields),
+  })
+}
+
+export function updateRole(roleId, fields) {
+  return request(`/auth/roles/${roleId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fields),
+  })
+}
+
+export function deleteRole(roleId) {
+  return request(`/auth/roles/${roleId}`, { method: 'DELETE' })
+}
+
 export function listUsers() {
   return request('/auth/users')
 }

@@ -246,7 +246,24 @@ export default function Registry() {
   const loadTabs = useCallback(async () => {
     const data = await listRegistryTabs()
     setTabs(data.tabs)
-  }, [])
+    // Role-scoped books have no Main Book tab, and a deep link can point at
+    // a sheet outside the role. Snap to the first tab the server returned
+    // (the server also refuses disallowed rows - this is just the UX half).
+    // Functional updater: reads the CURRENT params without making loadTabs
+    // depend on them, so tab switches don't refetch the tab list.
+    const ids = data.tabs.map((t) => t.id)
+    setSearchParams(
+      (prev) => {
+        const current = prev.get('sheet')
+        if (ids.includes(current)) return prev
+        const next = new URLSearchParams(prev)
+        if (ids[0]) next.set('sheet', ids[0])
+        else next.delete('sheet')
+        return next
+      },
+      { replace: true },
+    )
+  }, [setSearchParams])
 
   const loadRows = useCallback(async (projectId) => {
     setRows(null)
