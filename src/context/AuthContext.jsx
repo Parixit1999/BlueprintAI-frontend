@@ -87,15 +87,20 @@ export function AuthProvider({ children, loginScreen }) {
   const value = useMemo(() => {
     const isAdmin = !!user?.is_admin
     const pages = user?.role?.pages ?? []
+    // false = view-only role: the server refuses writes; the UI also hides
+    // the affordances so viewers aren't offered buttons that can only fail
+    const canEdit = isAdmin || (user?.role?.can_edit ?? false)
     return {
       user,
       logout,
       isAdmin,
       hasAccess: isAdmin || !!user?.role,
-      can: (page) => isAdmin || pages.includes(page),
-      // false = view-only role: the server refuses writes; the UI also hides
-      // the affordances so viewers aren't offered buttons that can only fail
-      canEdit: isAdmin || (user?.role?.can_edit ?? false),
+      // Upload is the one page that is nothing BUT a write, so a view-only
+      // role never gets it even when its page list says otherwise - better
+      // than handing someone a dropzone every file would 403 out of.
+      can: (page) =>
+        isAdmin || (pages.includes(page) && (page !== 'upload' || canEdit)),
+      canEdit,
     }
   }, [user, logout])
 

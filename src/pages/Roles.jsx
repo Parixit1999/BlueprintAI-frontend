@@ -237,6 +237,14 @@ export default function Roles() {
                   <Checkbox
                     key={p.value}
                     label={p.label}
+                    // uploading is nothing but a write, so it is off the table
+                    // for a view-only role (see AuthContext.can)
+                    disabled={p.value === 'upload' && !form.can_edit}
+                    description={
+                      p.value === 'upload' && !form.can_edit
+                        ? 'Not available to a view-only role'
+                        : undefined
+                    }
                     checked={form.pages.includes(p.value)}
                     onChange={(e) => {
                       const checked = e.currentTarget.checked
