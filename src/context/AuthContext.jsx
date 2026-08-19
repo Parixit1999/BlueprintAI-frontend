@@ -93,6 +93,9 @@ export function AuthProvider({ children, loginScreen }) {
       isAdmin,
       hasAccess: isAdmin || !!user?.role,
       can: (page) => isAdmin || pages.includes(page),
+      // false = view-only role: the server refuses writes; the UI also hides
+      // the affordances so viewers aren't offered buttons that can only fail
+      canEdit: isAdmin || (user?.role?.can_edit ?? false),
     }
   }, [user, logout])
 

@@ -10,8 +10,9 @@ import { useToast } from '../components/Toast'
 import { useAuth } from '../context/AuthContext'
 
 /**
- * Everyone who can sign in to this workspace. Deliberately role-free: the
- * pilot is one shared team, so an account either exists or it doesn't.
+ * Everyone who can sign in to this workspace, and what each of them may do.
+ * An account's access comes from its role (see the Roles page); administrators
+ * bypass roles entirely and are the only people who can open this page.
  */
 export default function Users() {
   const [users, setUsers] = useState(null)
@@ -122,7 +123,7 @@ export default function Users() {
     <div>
       <PageHeader
         title="People"
-        description="Everyone with access to this workspace. Anyone here can sign in and work with the full archive."
+        description="Everyone who can sign in. A person's access comes from their role - administrators can use everything."
         onRefresh={refresh}
         actions={
           <Button leftSection={<IconUserPlus size={16} />} onClick={() => setAdding(true)}>

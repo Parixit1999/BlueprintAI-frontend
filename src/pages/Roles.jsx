@@ -5,6 +5,7 @@ import {
   Group,
   Modal,
   MultiSelect,
+  SegmentedControl,
   Stack,
   Switch,
   Text,
@@ -30,7 +31,7 @@ const PAGE_OPTIONS = [
 ]
 const PAGE_LABEL = Object.fromEntries(PAGE_OPTIONS.map((p) => [p.value, p.label]))
 
-const EMPTY_FORM = { name: '', pages: [], all_sheets: true, project_ids: [] }
+const EMPTY_FORM = { name: '', pages: [], all_sheets: true, project_ids: [], can_edit: true }
 
 /**
  * Admin-only: the roles an administrator can hand out. A role is a name,
@@ -83,6 +84,7 @@ export default function Roles() {
       pages: role.pages,
       all_sheets: role.all_sheets,
       project_ids: role.project_ids,
+      can_edit: role.can_edit ?? true,
     })
     setEditing(role)
   }
@@ -150,7 +152,14 @@ export default function Roles() {
           {roles.map((r) => (
             <div key={r.role_id} className="panel role-card">
               <div className="role-card-head">
-                <h2>{r.name}</h2>
+                <Group gap={8}>
+                  <h2>{r.name}</h2>
+                  {r.can_edit === false && (
+                    <Badge variant="light" color="gray" radius="sm">
+                      View only
+                    </Badge>
+                  )}
+                </Group>
                 <Group gap={4}>
                   <Button
                     variant="subtle"
@@ -241,6 +250,27 @@ export default function Roles() {
                   />
                 ))}
               </Stack>
+            </div>
+            <div>
+              <Text size="sm" fw={500} mb={6}>
+                Access level
+              </Text>
+              <SegmentedControl
+                fullWidth
+                value={form.can_edit ? 'edit' : 'view'}
+                onChange={(v) => {
+                  const canEdit = v === 'edit'
+                  setForm((f) => ({ ...f, can_edit: canEdit }))
+                }}
+                data={[
+                  { value: 'edit', label: 'Can make changes' },
+                  { value: 'view', label: 'View only' },
+                ]}
+              />
+              <Text size="xs" c="dimmed" mt={4}>
+                View only: sees its pages and sheets, asks chat questions, but
+                can&rsquo;t upload, edit, or delete anything.
+              </Text>
             </div>
             <Switch
               label="Access all Number Book sheets"

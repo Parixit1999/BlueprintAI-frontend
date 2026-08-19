@@ -7,6 +7,7 @@ import ErrorState from '../components/ErrorState'
 import Loading from '../components/Loading'
 import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
+import { useAuth } from '../context/AuthContext'
 
 /**
  * The book's recycle bin. Deleting a registry row is a soft delete, so this
@@ -19,6 +20,7 @@ export default function DeletedRegistry() {
   const [restoringId, setRestoringId] = useState(null)
   const toast = useToast()
   const navigate = useNavigate()
+  const { canEdit } = useAuth()
 
   function refresh() {
     return listDeletedRegistryRows()
@@ -102,15 +104,17 @@ export default function DeletedRegistry() {
                     </div>
                   </td>
                   <td className="cell-action">
-                    <Button
-                      variant="light"
-                      size="compact-xs"
-                      leftSection={<IconArrowBackUp size={14} />}
-                      loading={restoringId === r.drawing_id}
-                      onClick={() => restore(r)}
-                    >
-                      Restore
-                    </Button>
+                    {canEdit && (
+                      <Button
+                        variant="light"
+                        size="compact-xs"
+                        leftSection={<IconArrowBackUp size={14} />}
+                        loading={restoringId === r.drawing_id}
+                        onClick={() => restore(r)}
+                      >
+                        Restore
+                      </Button>
+                    )}
                   </td>
                 </tr>
               ))}

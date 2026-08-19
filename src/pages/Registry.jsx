@@ -34,6 +34,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import ErrorState from '../components/ErrorState'
 import PageHeader from '../components/PageHeader'
 import { useToast } from '../components/Toast'
+import { useAuth } from '../context/AuthContext'
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
@@ -90,7 +91,7 @@ function CellTooltip({ value }) {
  * (Excel's right-click sheet list, made searchable), Main Book stays pinned,
  * and the strip scrolls for everything in between.
  */
-function SheetBar({ tabs, activeId, onSelect, onNewSheet }) {
+function SheetBar({ tabs, activeId, onSelect, onNewSheet, canEdit = true }) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerQuery, setPickerQuery] = useState('')
   const stripRef = useRef(null)
@@ -191,11 +192,13 @@ function SheetBar({ tabs, activeId, onSelect, onNewSheet }) {
         ))}
       </div>
 
-      <Tooltip label="New sheet" withArrow>
-        <button className="registry-tab registry-new-sheet" aria-label="New sheet" onClick={onNewSheet}>
-          <IconPlus size={14} />
-        </button>
-      </Tooltip>
+      {canEdit && (
+        <Tooltip label="New sheet" withArrow>
+          <button className="registry-tab registry-new-sheet" aria-label="New sheet" onClick={onNewSheet}>
+            <IconPlus size={14} />
+          </button>
+        </Tooltip>
+      )}
     </div>
   )
 }
@@ -220,6 +223,7 @@ export default function Registry() {
   const editSnapshot = useRef(null)
   const toast = useToast()
   const navigate = useNavigate()
+  const { canEdit } = useAuth()
 
   const cancelPendingOpen = useCallback(() => {
     if (openTimer.current) {
@@ -302,7 +306,7 @@ export default function Registry() {
         tooltipValueGetter: () => 'Open this drawing',
         onCellClicked: (p) => navigate(`/drawings/${p.data.drawing_id}`),
       },
-      {
+      ...(canEdit ? [{
         // Row actions sit next to the index so every row exposes the same two
         // verbs in the same place: edit opens the WHOLE row for editing, the
         // bin soft-deletes it (recoverable from the Deleted page).
@@ -349,7 +353,7 @@ export default function Registry() {
             </button>
           </span>
         ),
-      },
+      }] : []),
       {
         field: 'dwg_number',
         headerName: 'DWG #',
@@ -419,13 +423,13 @@ export default function Registry() {
     // The old PDF column is gone: opening a drawing's scans is what the row
     // number and DWG # now do, so the book keeps its width for book data.
     return cols
-  }, [activeTab, navigate, cancelPendingOpen])
+  }, [activeTab, navigate, cancelPendingOpen, canEdit])
 
   const isBlank = (v) => v === null || v === undefined || v === ''
 
   const defaultColDef = useMemo(
     () => ({
-      editable: (p) => EDITABLE.has(p.colDef.field),
+      editable: (p) => canEdit && EDITABLE.has(p.colDef.field),
       resizable: true,
       sortable: true,
       filter: true,
@@ -435,7 +439,7 @@ export default function Registry() {
       valueFormatter: (p) => (isBlank(p.value) ? '-' : String(p.value)),
       cellClassRules: { 'registry-empty': (p) => isBlank(p.value) },
     }),
-    []
+    [canEdit]
   )
 
   // Row editing: opening one cell opens the whole row, so persistence is
@@ -570,7 +574,7 @@ export default function Registry() {
         onRefresh={() => Promise.all([loadTabs(), loadRows(activeTab)])}
         actions={
           <>
-            {selectedCount > 0 && (
+            {canEdit && selectedCount > 0 && (
               <Button
                 variant="light"
                 color="red"
@@ -604,9 +608,11 @@ export default function Registry() {
             <Button variant="default" leftSection={<IconDownload size={16} />} onClick={exportBook}>
               Export {activeTab ? 'sheet' : 'book'}
             </Button>
-            <Button leftSection={<IconPlus size={16} />} onClick={addRow} disabled={busy}>
-              Add row
-            </Button>
+            {canEdit && (
+              <Button leftSection={<IconPlus size={16} />} onClick={addRow} disabled={busy}>
+                Add row
+              </Button>
+            )}
           </>
         }
         mb="md"
@@ -647,7 +653,11 @@ export default function Registry() {
             onRowEditingStarted={onRowEditingStarted}
             onRowValueChanged={onRowValueChanged}
             onCellDoubleClicked={cancelPendingOpen}
-            rowSelection={{ mode: 'multiRow', checkboxes: true, headerCheckbox: true }}
+            rowSelection={
+              canEdit
+                ? { mode: 'multiRow', checkboxes: true, headerCheckbox: true }
+                : undefined
+            }
             // pinned left so the checkbox is the FIRST column - unpinned, it
             // sorted after the pinned index/DWG columns and landed third
             selectionColumnDef={{
@@ -673,6 +683,7 @@ export default function Registry() {
           activeId={activeTab}
           onSelect={setActiveTab}
           onNewSheet={() => setNewSheet(true)}
+          canEdit={canEdit}
         />
       )}
 
