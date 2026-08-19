@@ -23,6 +23,7 @@ import Loading from '../components/Loading'
 import PageHeader from '../components/PageHeader'
 import TablePagination from '../components/TablePagination'
 import { useToast } from '../components/Toast'
+import { useAuth } from '../context/AuthContext'
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All statuses' },
@@ -61,6 +62,7 @@ export default function Documents() {
   const [bulkRetrying, setBulkRetrying] = useState(false)
   const toast = useToast()
   const navigate = useNavigate()
+  const { canEdit, can } = useAuth()
 
   async function handleRetry(file) {
     setRetryingId(file.file_id)
@@ -271,7 +273,7 @@ export default function Documents() {
         onRefresh={refresh}
         actions={
           <>
-            {failedCount > 0 && (
+            {canEdit && failedCount > 0 && (
               <Button
                 variant="light"
                 color="orange"
@@ -281,7 +283,7 @@ export default function Documents() {
                 Retry {failedCount} failed
               </Button>
             )}
-            {pendingReviewCount > 0 && (
+            {canEdit && pendingReviewCount > 0 && (
               <Button
                 variant="default"
                 leftSection={<IconDatabaseImport size={16} />}
@@ -291,9 +293,11 @@ export default function Documents() {
                 Ingest all ({pendingReviewCount})
               </Button>
             )}
-            <Button leftSection={<IconUpload size={16} />} onClick={() => navigate('/upload')}>
-              Upload drawings
-            </Button>
+            {canEdit && can('upload') && (
+              <Button leftSection={<IconUpload size={16} />} onClick={() => navigate('/upload')}>
+                Upload drawings
+              </Button>
+            )}
           </>
         }
       />
@@ -550,7 +554,7 @@ export default function Documents() {
                           overflow menu so a mis-click can't delete a drawing. */}
                       <div className="action-row">
                         <span className="action-slot">
-                          {!f.drawing_id && f.status !== 'failed' && (
+                          {canEdit && !f.drawing_id && f.status !== 'failed' && (
                             <Button
                               variant="light"
                               color="grape"
@@ -562,7 +566,7 @@ export default function Documents() {
                           )}
                         </span>
                         <span className="action-slot">
-                          {f.status === 'failed' ? (
+                          {f.status === 'failed' && canEdit ? (
                             <Button
                               variant="light"
                               size="compact-xs"
@@ -584,6 +588,7 @@ export default function Documents() {
                         {/* icon rather than a text button: same single click,
                             but it frees the width that was clipping this
                             column, and reads as secondary to Review/View */}
+                        {canEdit && (
                         <Tooltip label="Delete document" withArrow position="left">
                           <ActionIcon
                             variant="subtle"
@@ -595,6 +600,7 @@ export default function Documents() {
                             <IconTrash size={15} />
                           </ActionIcon>
                         </Tooltip>
+                        )}
                       </div>
                     </td>
                   </tr>

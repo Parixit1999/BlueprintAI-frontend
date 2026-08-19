@@ -3,6 +3,7 @@ import { useDisclosure } from '@mantine/hooks'
 import {
   IconKey,
   IconLayoutDashboard,
+  IconShieldLock,
   IconLogout,
   IconMessageCircle,
   IconFileText,
@@ -18,11 +19,11 @@ import Modal from './Modal'
 import { useToast } from './Toast'
 
 const NAV = [
-  { to: '/', label: 'Dashboard', icon: IconLayoutDashboard, end: true },
-  { to: '/registry', label: 'Number Book', icon: IconTable },
-  { to: '/upload', label: 'Upload', icon: IconUpload },
-  { to: '/documents', label: 'Documents', icon: IconFileText },
-  { to: '/chat', label: 'Chat', icon: IconMessageCircle },
+  { to: '/', label: 'Dashboard', icon: IconLayoutDashboard, end: true, page: 'dashboard' },
+  { to: '/registry', label: 'Number Book', icon: IconTable, page: 'numberbook' },
+  { to: '/upload', label: 'Upload', icon: IconUpload, page: 'upload' },
+  { to: '/documents', label: 'Documents', icon: IconFileText, page: 'documents' },
+  { to: '/chat', label: 'Chat', icon: IconMessageCircle, page: 'chat' },
 ]
 
 function Brand() {
@@ -38,9 +39,10 @@ function Brand() {
 }
 
 function Nav({ onNavigate }) {
+  const { can } = useAuth()
   return (
     <nav className="sidebar-nav">
-      {NAV.map(({ to, label, icon: Icon, end }) => (
+      {NAV.filter(({ page }) => can(page)).map(({ to, label, icon: Icon, end }) => (
         <NavLink
           key={to}
           to={to}
@@ -57,7 +59,7 @@ function Nav({ onNavigate }) {
 }
 
 function Footer() {
-  const { user, logout } = useAuth()
+  const { user, logout, isAdmin } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
   const [changing, setChanging] = useState(false)
@@ -104,12 +106,22 @@ function Footer() {
           </button>
         </Menu.Target>
         <Menu.Dropdown>
-          <Menu.Item
-            leftSection={<IconUsers size={15} />}
-            onClick={() => navigate('/users')}
-          >
-            People
-          </Menu.Item>
+          {isAdmin && (
+            <Menu.Item
+              leftSection={<IconUsers size={15} />}
+              onClick={() => navigate('/users')}
+            >
+              People
+            </Menu.Item>
+          )}
+          {isAdmin && (
+            <Menu.Item
+              leftSection={<IconShieldLock size={15} />}
+              onClick={() => navigate('/roles')}
+            >
+              Roles
+            </Menu.Item>
+          )}
           <Menu.Item leftSection={<IconKey size={15} />} onClick={() => setChanging(true)}>
             Change password
           </Menu.Item>
